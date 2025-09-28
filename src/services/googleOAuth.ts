@@ -16,7 +16,7 @@ export interface GoogleTokens {
 class GoogleOAuthService {
   private clientId: string;
   private redirectUri: string;
-  private scope = 'https://www.googleapis.com/auth/calendar.readonly';
+  private scope = 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.readonly';
 
   constructor(credentials: OAuthCredentials) {
     this.clientId = credentials.clientId;
