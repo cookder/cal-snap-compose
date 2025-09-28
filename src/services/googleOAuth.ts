@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 export interface OAuthCredentials {
   clientId: string;
   clientSecret: string;
+  redirectUri?: string;
 }
 
 export interface GoogleTokens {
@@ -20,8 +21,8 @@ class GoogleOAuthService {
 
   constructor(credentials: OAuthCredentials) {
     this.clientId = credentials.clientId;
-    // Dedicated callback route for reliability
-    this.redirectUri = `${window.location.origin}/google-oauth/callback`;
+    // Prefer server-configured redirect URI to avoid mismatches
+    this.redirectUri = credentials.redirectUri || `${window.location.origin}/google-oauth/callback`;
 
     // Log the redirect URI for debugging
     console.log('OAuth Redirect URI:', this.redirectUri);

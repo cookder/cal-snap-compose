@@ -39,7 +39,8 @@ const Index = () => {
         if (data?.clientId && data?.clientSecret) {
           setCredentials({
             clientId: data.clientId,
-            clientSecret: data.clientSecret
+            clientSecret: data.clientSecret,
+            redirectUri: data.redirectUri,
           });
           setCredentialsError(null);
         } else {

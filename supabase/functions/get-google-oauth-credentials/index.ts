@@ -18,6 +18,7 @@ serve(async (req) => {
     // Get OAuth credentials from Supabase secrets
     const clientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID');
     const clientSecret = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET');
+    const redirectUri = Deno.env.get('GOOGLE_OAUTH_REDIRECT_URI') || 'https://cal-snap-compose.lovable.app/google-oauth/callback';
     
     if (!clientId || !clientSecret) {
       return new Response(
@@ -32,7 +33,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ clientId, clientSecret }),
+      JSON.stringify({ clientId, clientSecret, redirectUri }),
       { 
         status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
