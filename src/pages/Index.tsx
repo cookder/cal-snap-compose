@@ -89,28 +89,36 @@ const Index = () => {
   }, [navigate]);
 
   const handleSignOut = async () => {
-    // Attempt global sign-out; fall back to local-only if server session is missing
-    const { error } = await supabase.auth.signOut();
-
-    if (error && !error.message.toLowerCase().includes("session")) {
-      toast({
-        title: "Error signing out",
-        description: error.message,
-        variant: "destructive",
-      });
-      return;
+    // Robust sign out: try global, then local, then hard-clear client tokens
+    try {
+      await supabase.auth.signOut(); // global
+    } catch (e) {
+      // ignore server session_not_found
     }
 
-    if (error && error.message.toLowerCase().includes("session")) {
-      // Clear only locally to ensure UI/logical logout when server has no session
+    try {
       await supabase.auth.signOut({ scope: 'local' });
+    } catch (e) {
+      // ignore local errors (seen as 403 when server session is gone)
     }
 
-    // Proactively clear local state and navigate (avoid race with listener)
+    // Hard clear any persisted Supabase auth tokens for this project (desktop fix)
+    try {
+      const projectRef = 'zlrratamkejbxlzmhkyr';
+      const keys = Object.keys(localStorage);
+      for (const k of keys) {
+        if (k.startsWith(`sb-${projectRef}-`) || k.startsWith('supabase.auth.token')) {
+          localStorage.removeItem(k);
+        }
+      }
+    } catch (e) {
+      // no-op
+    }
+
     setUser(null);
     setSession(null);
     toast({ title: "Signed out successfully" });
-    navigate('/auth');
+    navigate('/auth', { replace: true });
   };
 
   const handleEventsImported = (events: any[]) => {
