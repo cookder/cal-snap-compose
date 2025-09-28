@@ -3,25 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, FileText, CheckCircle } from "lucide-react";
+import { Copy, FileText, CheckCircle, Calendar } from "lucide-react";
 import { format, isToday, isTomorrow } from "date-fns";
+import { AvailableSlot } from "@/services/googleCalendar";
 
-interface TimeSlot {
-  start: string;
-  end: string;
-}
-
-interface AvailabilityItem {
-  date: Date;
-  slots: TimeSlot[];
-}
-
-interface AvailabilityGeneratorProps {
-  availability: AvailabilityItem[];
+interface GoogleAvailabilityGeneratorProps {
+  availability: AvailableSlot[];
   onTextGenerated: (text: string) => void;
 }
 
-export const AvailabilityGenerator = ({ availability, onTextGenerated }: AvailabilityGeneratorProps) => {
+export const GoogleAvailabilityGenerator = ({ availability, onTextGenerated }: GoogleAvailabilityGeneratorProps) => {
   const [generatedText, setGeneratedText] = useState("");
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
@@ -39,17 +30,19 @@ export const AvailabilityGenerator = ({ availability, onTextGenerated }: Availab
     
     if (availabilityWithSlots.length === 0) return "";
 
-    let text = "My availability:\n\n";
+    let text = "Here are my available time slots:\n\n";
     
     availabilityWithSlots.forEach((item, index) => {
       text += `${formatDateForText(item.date)}:\n`;
-      item.slots.forEach((slot, slotIndex) => {
+      item.slots.forEach((slot) => {
         text += `• ${slot.start} - ${slot.end}\n`;
       });
       if (index < availabilityWithSlots.length - 1) {
         text += "\n";
       }
     });
+
+    text += "\nPlease let me know which time works best for you!";
 
     return text;
   };
@@ -81,6 +74,9 @@ export const AvailabilityGenerator = ({ availability, onTextGenerated }: Availab
     }
   };
 
+  const totalSlots = availability.reduce((total, day) => total + day.slots.length, 0);
+  const totalDays = availability.filter(day => day.slots.length > 0).length;
+
   return (
     <Card className="h-full shadow-md">
       <CardHeader className="pb-3 bg-gmail-light border-b">
@@ -102,8 +98,9 @@ export const AvailabilityGenerator = ({ availability, onTextGenerated }: Availab
             </div>
             
             <div className="flex items-center justify-between pt-2 border-t">
-              <div className="text-sm text-muted-foreground">
-                {availability.filter(item => item.slots.length > 0).length} days with {availability.reduce((total, item) => total + item.slots.length, 0)} time slots
+              <div className="text-sm text-muted-foreground flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                {totalDays} days • {totalSlots} available slots
               </div>
               <Button
                 onClick={copyToClipboard}
@@ -130,8 +127,9 @@ export const AvailabilityGenerator = ({ availability, onTextGenerated }: Availab
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center text-muted-foreground">
-              <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-              <p className="text-sm">Select dates and time slots to generate availability text</p>
+              <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+              <p className="text-sm">Select dates from your Google Calendar to generate availability text</p>
+              <p className="text-xs mt-2">Available slots will be automatically detected between 9 AM - 5 PM</p>
             </div>
           </div>
         )}

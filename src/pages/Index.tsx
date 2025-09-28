@@ -1,32 +1,55 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { LogOut, User } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { LogOut, User, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { EmailComposer } from "@/components/EmailComposer";
-import { AvailabilitySelector } from "@/components/AvailabilitySelector";
-import { AvailabilityGenerator } from "@/components/AvailabilityGenerator";
+import { GoogleCalendarView } from "@/components/GoogleCalendarView";
+import { GoogleAvailabilityGenerator } from "@/components/GoogleAvailabilityGenerator";
 import { FeedbackForm } from "@/components/FeedbackForm";
-
-interface TimeSlot {
-  start: string;
-  end: string;
-}
-
-interface AvailabilityItem {
-  date: Date;
-  slots: TimeSlot[];
-}
+import { CalendarInstructions } from "@/components/CalendarInstructions";
+import { AvailableSlot } from "@/services/googleCalendar";
 
 const Index = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [availability, setAvailability] = useState<AvailabilityItem[]>([]);
+  const [availability, setAvailability] = useState<AvailableSlot[]>([]);
   const [availabilityText, setAvailabilityText] = useState("");
+  const [apiKey, setApiKey] = useState<string>("");
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
+  const [showInstructions, setShowInstructions] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Fetch API key from secrets via edge function
+  useEffect(() => {
+    const fetchApiKey = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-google-api-key');
+        
+        if (error) {
+          throw error;
+        }
+        
+        if (data?.apiKey) {
+          setApiKey(data.apiKey);
+          setApiKeyError(null);
+        } else {
+          setApiKeyError("Google Calendar API key not found. Please add GOOGLE_CALENDAR_API_KEY to your Supabase secrets.");
+        }
+      } catch (error) {
+        console.error('Error fetching API key:', error);
+        setApiKeyError("Failed to load Google Calendar API key. Please check your Supabase configuration.");
+      }
+    };
+
+    if (user) {
+      fetchApiKey();
+    }
+  }, [user]);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -91,8 +114,8 @@ const Index = () => {
                 <span className="text-white font-bold text-sm">G</span>
               </div>
               <div>
-                <h1 className="text-xl font-semibold">Gmail Calendar Integration</h1>
-                <p className="text-sm text-muted-foreground">Generate availability text for meeting scheduling</p>
+                <h1 className="text-xl font-semibold">Google Calendar Scheduler</h1>
+                <p className="text-sm text-muted-foreground">Find available time slots and generate scheduling text</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -116,15 +139,42 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
+        {showInstructions && (
+          <CalendarInstructions onDismiss={() => setShowInstructions(false)} />
+        )}
+        
+        {apiKeyError && (
+          <div className="mb-6">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {apiKeyError} Please check your Supabase secrets configuration.
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+        
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-180px)]">
-          {/* Calendar Selection */}
+          {/* Google Calendar View */}
           <div className="lg:col-span-1">
-            <AvailabilitySelector onAvailabilityChange={setAvailability} />
+            {apiKey ? (
+              <GoogleCalendarView 
+                onAvailabilityChange={setAvailability} 
+                apiKey={apiKey}
+              />
+            ) : (
+              <div className="h-full flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
+                <div className="text-center text-muted-foreground">
+                  <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+                  <p className="text-sm">Waiting for Google Calendar API key...</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Availability Text Generator */}
           <div className="lg:col-span-1">
-            <AvailabilityGenerator 
+            <GoogleAvailabilityGenerator 
               availability={availability}
               onTextGenerated={setAvailabilityText}
             />
