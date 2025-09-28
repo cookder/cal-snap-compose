@@ -29,6 +29,16 @@ export const CalendarInstructions = ({ onDismiss }: CalendarInstructionsProps) =
             <div className="space-y-2">
               <h4 className="font-medium flex items-center gap-2">
                 <span className="bg-gmail-blue text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">1</span>
+                Connect Google Calendar
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Click "Connect Google Calendar" to authorize access to your calendar data.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-medium flex items-center gap-2">
+                <span className="bg-gmail-blue text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">2</span>
                 Select Dates
               </h4>
               <p className="text-sm text-muted-foreground">
@@ -38,21 +48,11 @@ export const CalendarInstructions = ({ onDismiss }: CalendarInstructionsProps) =
 
             <div className="space-y-2">
               <h4 className="font-medium flex items-center gap-2">
-                <span className="bg-gmail-blue text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">2</span>
+                <span className="bg-gmail-blue text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">3</span>
                 Choose Duration
               </h4>
               <p className="text-sm text-muted-foreground">
                 Select whether you want 30-minute or 1-hour available slots.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <h4 className="font-medium flex items-center gap-2">
-                <span className="bg-gmail-blue text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">3</span>
-                Review Available Slots
-              </h4>
-              <p className="text-sm text-muted-foreground">
-                The app will show your existing events and highlight available time slots.
               </p>
             </div>
 

@@ -15,13 +15,14 @@ serve(async (req) => {
   }
 
   try {
-    // Get the Google Calendar API key from Supabase secrets
-    const apiKey = Deno.env.get('GOOGLE_CALENDAR_API_KEY');
+    // Get OAuth credentials from Supabase secrets
+    const clientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID');
+    const clientSecret = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET');
     
-    if (!apiKey) {
+    if (!clientId || !clientSecret) {
       return new Response(
         JSON.stringify({ 
-          error: 'Google Calendar API key not configured. Please add GOOGLE_CALENDAR_API_KEY to your Supabase secrets.' 
+          error: 'Google OAuth credentials not configured. Please add GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET to your Supabase secrets.' 
         }),
         { 
           status: 500, 
@@ -31,7 +32,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ apiKey }),
+      JSON.stringify({ clientId, clientSecret }),
       { 
         status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -41,7 +42,7 @@ serve(async (req) => {
     console.error('Error fetching Google Calendar API key:', error);
     return new Response(
       JSON.stringify({ 
-        error: 'Failed to retrieve Google Calendar API key' 
+        error: 'Failed to retrieve Google OAuth credentials' 
       }),
       { 
         status: 500, 
