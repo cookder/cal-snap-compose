@@ -90,16 +90,20 @@ const Index = () => {
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
-    if (error) {
+    if (error && error.message !== "session_not_found" && !error.message.includes("session") && !error.message.includes("Session not found")) {
       toast({
         title: "Error signing out",
         description: error.message,
         variant: "destructive",
       });
     } else {
+      // Clear local state and navigate to auth page
+      setUser(null);
+      setSession(null);
       toast({
         title: "Signed out successfully",
       });
+      navigate('/auth');
     }
   };
 
