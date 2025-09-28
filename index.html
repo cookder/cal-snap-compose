@@ -14,7 +14,50 @@
     
     <!-- Preload critical resources -->
     <link rel="modulepreload" href="/src/main.tsx" />
-    <link rel="preload" href="/src/index.css" as="style" />
+    
+    <!-- Inline critical CSS for immediate rendering -->
+    <style>
+      /* Critical above-the-fold styles */
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+      .min-h-screen { min-height: 100vh; }
+      .flex { display: flex; }
+      .items-center { align-items: center; }
+      .justify-center { justify-content: center; }
+      .animate-spin { animation: spin 1s linear infinite; }
+      .rounded-full { border-radius: 9999px; }
+      .h-8 { height: 2rem; }
+      .w-8 { width: 2rem; }
+      .border-b-2 { border-bottom-width: 2px; }
+      .mx-auto { margin-left: auto; margin-right: auto; }
+      .mt-2 { margin-top: 0.5rem; }
+      .text-center { text-align: center; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+    
+    <!-- Load CSS asynchronously to avoid render blocking -->
+    <script>
+      !function(e){"use strict";var t=function(t,n,r){function o(e){return i.body?e():void setTimeout(function(){o(e)})}function a(){d.addEventListener&&d.removeEventListener("load",a),d.media=r||"all"}var i=e.document,d=i.createElement("link");if(n)d.href=n;else{var l=(i.body||i.getElementsByTagName("head")[0]).childNodes;d.href=l[l.length-1].href}d.rel="stylesheet",d.addEventListener("load",a),d.media="only x",o(function(){i.head.appendChild(d)})};e.loadCSS=t}(this);
+      
+      // Load the main CSS file asynchronously
+      document.addEventListener('DOMContentLoaded', function() {
+        const links = document.querySelectorAll('link[rel="stylesheet"]');
+        links.forEach(function(link) {
+          if (link.href.includes('index-') && link.href.includes('.css')) {
+            const asyncLink = document.createElement('link');
+            asyncLink.rel = 'preload';
+            asyncLink.as = 'style';
+            asyncLink.href = link.href;
+            asyncLink.onload = function() {
+              this.onload = null;
+              this.rel = 'stylesheet';
+            };
+            document.head.appendChild(asyncLink);
+            link.remove();
+          }
+        });
+      });
+    </script>
 
     <meta property="og:title" content="Gmail Calendar Integration Plugin" />
     <meta property="og:description" content="Generate availability text for meeting scheduling with Gmail integration" />
