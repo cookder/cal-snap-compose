@@ -89,19 +89,28 @@ const Index = () => {
   }, [navigate]);
 
   const handleSignOut = async () => {
+    // Attempt global sign-out; fall back to local-only if server session is missing
     const { error } = await supabase.auth.signOut();
-    if (error && error.message !== "session_not_found" && !error.message.includes("session") && !error.message.includes("Session not found")) {
+
+    if (error && !error.message.toLowerCase().includes("session")) {
       toast({
         title: "Error signing out",
         description: error.message,
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Signed out successfully",
-      });
-      // Don't manually navigate - let the auth state change listener handle it
+      return;
     }
+
+    if (error && error.message.toLowerCase().includes("session")) {
+      // Clear only locally to ensure UI/logical logout when server has no session
+      await supabase.auth.signOut({ scope: 'local' });
+    }
+
+    // Proactively clear local state and navigate (avoid race with listener)
+    setUser(null);
+    setSession(null);
+    toast({ title: "Signed out successfully" });
+    navigate('/auth');
   };
 
   const handleEventsImported = (events: any[]) => {
