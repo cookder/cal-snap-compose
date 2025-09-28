@@ -8,6 +8,7 @@ import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { EmailComposer } from "@/components/EmailComposer";
 import { AvailabilitySelector } from "@/components/AvailabilitySelector";
 import { AvailabilityGenerator } from "@/components/AvailabilityGenerator";
+import { FeedbackForm } from "@/components/FeedbackForm";
 
 interface TimeSlot {
   start: string;
@@ -136,6 +137,11 @@ const Index = () => {
               onInsertAvailability={() => {}}
             />
           </div>
+        </div>
+        
+        {/* Feedback Section */}
+        <div className="mt-8 flex justify-center">
+          <FeedbackForm />
         </div>
       </main>
     </div>
