@@ -80,7 +80,7 @@ const GoogleOAuthCallback = () => {
 
         console.log('OAuth credentials retrieved successfully');
         
-        const creds: OAuthCredentials = { clientId: data.clientId, clientSecret: data.clientSecret, redirectUri: data.redirectUri };
+        const creds: OAuthCredentials = { clientId: data.clientId, clientSecret: data.clientSecret };
         const oauth = new GoogleOAuthService(creds);
 
         console.log('Starting token exchange...');

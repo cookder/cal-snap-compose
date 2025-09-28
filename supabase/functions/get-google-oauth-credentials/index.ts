@@ -18,7 +18,6 @@ serve(async (req) => {
     // Get OAuth credentials from Supabase secrets
     const clientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID');
     const clientSecret = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET');
-    const redirectUri = Deno.env.get('GOOGLE_OAUTH_REDIRECT_URI') || 'https://7512f92b-0bee-4020-a9bd-994e850579bb.lovableproject.com/google-oauth/callback';
     
     if (!clientId || !clientSecret) {
       return new Response(
@@ -33,7 +32,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ clientId, clientSecret, redirectUri }),
+      JSON.stringify({ clientId, clientSecret }),
       { 
         status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
