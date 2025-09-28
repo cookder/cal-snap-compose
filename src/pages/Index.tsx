@@ -97,13 +97,10 @@ const Index = () => {
         variant: "destructive",
       });
     } else {
-      // Clear local state and navigate to auth page
-      setUser(null);
-      setSession(null);
       toast({
         title: "Signed out successfully",
       });
-      navigate('/auth');
+      // Don't manually navigate - let the auth state change listener handle it
     }
   };
 
