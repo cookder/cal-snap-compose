@@ -37,9 +37,6 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
       
       // Check if already authenticated
       checkAuthStatus(oauth);
-      
-      // Handle OAuth callback
-      handleOAuthCallback(oauth);
     }
   }, [credentials]);
 
@@ -53,42 +50,12 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
     }
   };
 
-  const handleOAuthCallback = async (oauth: GoogleOAuthService) => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    
-    if (code) {
-      try {
-        setLoading(true);
-        const tokens = await oauth.exchangeCodeForTokens(code);
-        oauth.saveTokens(tokens);
-        setIsAuthenticated(true);
-        
-        // Clean up URL
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        setError(null);
-        toast({
-          title: "Connected!",
-          description: "Successfully connected to Google Calendar.",
-        });
-      } catch (error) {
-        console.error('OAuth callback error:', error);
-        setError(error instanceof Error ? error.message : 'Failed to complete Google authentication');
-        toast({
-          title: "Authentication Failed",
-          description: "Failed to connect to Google Calendar. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
 
   const handleGoogleLogin = () => {
     if (oauthService) {
+      console.log('Initiating Google Calendar authentication...');
       const authUrl = oauthService.getAuthUrl();
+      console.log('Redirecting to Google OAuth:', authUrl);
       window.location.href = authUrl;
     }
   };

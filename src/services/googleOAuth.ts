@@ -1,3 +1,5 @@
+import { supabase } from '@/integrations/supabase/client';
+
 export interface OAuthCredentials {
   clientId: string;
   clientSecret: string;
@@ -13,13 +15,11 @@ export interface GoogleTokens {
 
 class GoogleOAuthService {
   private clientId: string;
-  private clientSecret: string;
   private redirectUri: string;
   private scope = 'https://www.googleapis.com/auth/calendar.readonly';
 
   constructor(credentials: OAuthCredentials) {
     this.clientId = credentials.clientId;
-    this.clientSecret = credentials.clientSecret;
     // Dedicated callback route for reliability
     this.redirectUri = `${window.location.origin}/google-oauth/callback`;
 
@@ -37,54 +37,65 @@ class GoogleOAuthService {
       prompt: 'consent'
     });
 
-    return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+    console.log('Generated Google OAuth URL:', authUrl);
+    console.log('Using redirect URI:', this.redirectUri);
+    
+    return authUrl;
   }
 
   async exchangeCodeForTokens(code: string): Promise<GoogleTokens> {
-    console.log('Exchanging code for tokens...', { code: code.substring(0, 10) + '...', redirectUri: this.redirectUri });
+    console.log('Exchanging authorization code via edge function...', { 
+      code: code.substring(0, 10) + '...', 
+      redirectUri: this.redirectUri 
+    });
     
-    const response = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+    const { data, error } = await supabase.functions.invoke('google-oauth', {
+      body: { 
+        action: 'exchange_code', 
+        code 
       },
-      body: new URLSearchParams({
-        client_id: this.clientId,
-        client_secret: this.clientSecret,
-        code,
-        grant_type: 'authorization_code',
-        redirect_uri: this.redirectUri,
-      }),
+      headers: {
+        'x-redirect-uri': this.redirectUri
+      }
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OAuth token exchange failed:', response.status, errorText);
-      throw new Error(`OAuth token exchange failed: ${response.status} - ${errorText}`);
+    if (error) {
+      console.error('Edge function error during token exchange:', error);
+      throw new Error(`OAuth token exchange failed: ${error.message || 'Unknown error'}`);
     }
 
-    return await response.json();
+    if (data.error) {
+      console.error('Google OAuth API error:', data.error);
+      throw new Error(data.error);
+    }
+
+    console.log('Token exchange successful via edge function');
+    return data;
   }
 
   async refreshAccessToken(refreshToken: string): Promise<GoogleTokens> {
-    const response = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        client_id: this.clientId,
-        client_secret: this.clientSecret,
-        refresh_token: refreshToken,
-        grant_type: 'refresh_token',
-      }),
+    console.log('Refreshing access token via edge function...');
+    
+    const { data, error } = await supabase.functions.invoke('google-oauth', {
+      body: { 
+        action: 'refresh_token', 
+        refresh_token: refreshToken 
+      }
     });
 
-    if (!response.ok) {
-      throw new Error(`Token refresh failed: ${response.status}`);
+    if (error) {
+      console.error('Edge function error during token refresh:', error);
+      throw new Error(`Token refresh failed: ${error.message || 'Unknown error'}`);
     }
 
-    return await response.json();
+    if (data.error) {
+      console.error('Google OAuth API error during refresh:', data.error);
+      throw new Error(data.error);
+    }
+
+    console.log('Token refresh successful via edge function');
+    return data;
   }
 
   saveTokens(tokens: GoogleTokens): void {
