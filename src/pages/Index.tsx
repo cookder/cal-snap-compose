@@ -112,7 +112,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-2 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-gmail-blue rounded-full flex items-center justify-center">
@@ -143,13 +143,15 @@ const Index = () => {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-6">
+      <main className="container mx-auto px-2 py-2">
         {showInstructions && (
-          <CalendarInstructions onDismiss={() => setShowInstructions(false)} />
+          <div className="mb-2">
+            <CalendarInstructions onDismiss={() => setShowInstructions(false)} />
+          </div>
         )}
         
         {credentialsError && (
-          <div className="mb-6">
+          <div className="mb-2">
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
@@ -159,7 +161,7 @@ const Index = () => {
           </div>
         )}
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-180px)]">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 auto-rows-min">
           {/* Google Calendar View */}
           <div className="lg:col-span-1">
             {credentials ? (
@@ -195,7 +197,7 @@ const Index = () => {
         </div>
         
         {/* Feedback Section */}
-        <div className="mt-8 flex justify-center">
+        <div className="mt-2 flex justify-center">
           <FeedbackForm />
         </div>
       </main>

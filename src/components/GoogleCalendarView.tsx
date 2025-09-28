@@ -209,41 +209,41 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
   }
 
   return (
-    <Card className="h-full shadow-md">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2">
-          <CalendarIcon className="h-5 w-5" />
+    <Card className="shadow-md">
+      <CardHeader className="pb-1 pt-3">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <CalendarIcon className="h-4 w-4" />
           Google Calendar Integration
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-xs">
           Connect your Google Calendar to view your availability
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-2 pt-2">
         {/* Authentication Status */}
-        <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+          <div className="flex items-center gap-1">
             {isAuthenticated ? (
               <>
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <span className="text-sm font-medium">Connected to Google Calendar</span>
+                <CheckCircle className="h-3 w-3 text-green-600" />
+                <span className="text-xs font-medium">Connected to Google Calendar</span>
               </>
             ) : (
               <>
-                <LogIn className="h-4 w-4 text-gray-600" />
-                <span className="text-sm font-medium">Not connected</span>
+                <LogIn className="h-3 w-3 text-gray-600" />
+                <span className="text-xs font-medium">Not connected</span>
               </>
             )}
           </div>
           {isAuthenticated ? (
-            <Button variant="outline" size="sm" onClick={handleGoogleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
+            <Button variant="outline" size="sm" onClick={handleGoogleLogout} className="h-6 px-2 text-xs">
+              <LogOut className="h-3 w-3 mr-1" />
               Disconnect
             </Button>
           ) : (
-            <Button onClick={handleGoogleLogin} disabled={loading}>
-              <LogIn className="h-4 w-4 mr-2" />
-              Connect Google Calendar
+            <Button onClick={handleGoogleLogin} disabled={loading} size="sm" className="h-6 px-2 text-xs">
+              <LogIn className="h-3 w-3 mr-1" />
+              Connect
             </Button>
           )}
         </div>
@@ -258,15 +258,15 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
 
         {/* Slot Duration Selection */}
         {isAuthenticated && (
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Meeting Duration</label>
+          <div className="space-y-1">
+            <label className="text-xs font-medium">Meeting Duration</label>
             <Select value={slotDuration.toString()} onValueChange={handleSlotDurationChange}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[140px] h-7 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="30">30 minutes</SelectItem>
-                <SelectItem value="60">60 minutes</SelectItem>
+                <SelectItem value="30">30 min</SelectItem>
+                <SelectItem value="60">60 min</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -274,8 +274,8 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
 
         {/* Calendar */}
         {isAuthenticated && (
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Select Available Dates</label>
+          <div className="space-y-1">
+            <label className="text-xs font-medium">Select Available Dates</label>
             <Calendar
               mode="multiple"
               selected={selectedDates}
@@ -285,7 +285,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                 }
               }}
               disabled={(date) => date < new Date()}
-              className="rounded-md border"
+              className="rounded-md border text-xs p-1"
             />
           </div>
         )}
@@ -300,22 +300,23 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
 
         {/* Available Slots Display */}
         {isAuthenticated && selectedDates.length > 0 && !loading && (
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Available Time Slots</h3>
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold">Available Time Slots</h3>
             
             {availability.map((daySlots) => {
               const dayEvents = getEventsForDate(daySlots.date);
               return (
-                <div key={daySlots.date.toISOString()} className="space-y-2">
+                <div key={daySlots.date.toISOString()} className="space-y-1 border-b border-border pb-1 mb-1">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-medium flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
+                    <h4 className="text-xs font-medium flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
                       {formatDateDisplay(daySlots.date)} ({format(daySlots.date, "EEE, MMM d")})
                     </h4>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => removeDate(daySlots.date)}
+                      className="h-5 px-1 text-xs"
                     >
                       Remove
                     </Button>
