@@ -20,7 +20,11 @@ class GoogleOAuthService {
   constructor(credentials: OAuthCredentials) {
     this.clientId = credentials.clientId;
     this.clientSecret = credentials.clientSecret;
+    // Use the current origin and add a specific path for OAuth callback
     this.redirectUri = `${window.location.origin}/`;
+    
+    // Log the redirect URI for debugging
+    console.log('OAuth Redirect URI:', this.redirectUri);
   }
 
   getAuthUrl(): string {
@@ -37,6 +41,8 @@ class GoogleOAuthService {
   }
 
   async exchangeCodeForTokens(code: string): Promise<GoogleTokens> {
+    console.log('Exchanging code for tokens...', { code: code.substring(0, 10) + '...', redirectUri: this.redirectUri });
+    
     const response = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: {
@@ -52,7 +58,9 @@ class GoogleOAuthService {
     });
 
     if (!response.ok) {
-      throw new Error(`OAuth token exchange failed: ${response.status}`);
+      const errorText = await response.text();
+      console.error('OAuth token exchange failed:', response.status, errorText);
+      throw new Error(`OAuth token exchange failed: ${response.status} - ${errorText}`);
     }
 
     return await response.json();
