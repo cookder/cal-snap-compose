@@ -215,9 +215,11 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
   }
 
   return (
-    <Card className="shadow-md">
-      <CardHeader className="pb-1 pt-3">
-        <CardTitle className="flex items-center gap-2 text-sm">
+    <Card className="backdrop-blur-sm bg-card/50 border border-border/50 shadow-xl shadow-black/10">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-3 text-lg">
+          <CalendarIcon className="h-5 w-5 text-primary" />
+          Calendar Integration
           <CalendarIcon className="h-4 w-4" />
           Google Calendar Integration
         </CardTitle>

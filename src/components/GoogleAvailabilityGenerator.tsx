@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, FileText, CheckCircle, Calendar } from "lucide-react";
+import { Copy, FileText, CheckCircle, Calendar, Sparkles } from "lucide-react";
 import { format, isToday, isTomorrow } from "date-fns";
 import { AvailableSlot } from "@/services/googleCalendar";
 
@@ -78,58 +78,60 @@ export const GoogleAvailabilityGenerator = ({ availability, onTextGenerated }: G
   const totalDays = availability.filter(day => day.slots.length > 0).length;
 
   return (
-    <Card className="h-full shadow-md">
-      <CardHeader className="pb-3 bg-gmail-light border-b">
-        <CardTitle className="flex items-center gap-2 text-foreground">
-          <FileText className="h-5 w-5 text-gmail-blue" />
-          Generated Availability Text
+    <Card className="backdrop-blur-sm bg-card/50 border border-border/50 shadow-xl shadow-black/10">
+      <CardHeader className="pb-4 bg-gradient-to-r from-card to-secondary/30 border-b border-border/20">
+        <CardTitle className="flex items-center gap-3 text-lg">
+          <Sparkles className="h-5 w-5 text-primary" />
+          AI Text Generator
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-4 h-full flex flex-col">
+      <CardContent className="p-6 flex flex-col">
         {generatedText ? (
-          <div className="flex-1 space-y-4">
-            <div className="flex-1">
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  {totalDays} days • {totalSlots} available slots
+                </div>
+              </div>
               <Textarea
                 value={generatedText}
                 onChange={(e) => setGeneratedText(e.target.value)}
-                className="h-full min-h-[200px] resize-none font-mono text-sm"
+                className="min-h-[200px] bg-secondary/20 border-border/30 focus:border-primary/50 transition-colors font-mono text-sm"
                 placeholder="Your availability will appear here..."
               />
             </div>
             
-            <div className="flex items-center justify-between pt-2 border-t">
-              <div className="text-sm text-muted-foreground flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                {totalDays} days • {totalSlots} available slots
-              </div>
-              <Button
-                onClick={copyToClipboard}
-                className={`${
-                  copied 
-                    ? "bg-success hover:bg-success text-success-foreground" 
-                    : "bg-gmail-blue hover:bg-gmail-hover text-white"
-                } transition-colors`}
-              >
-                {copied ? (
-                  <>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-4 w-4 mr-2" />
-                    Copy Text
-                  </>
-                )}
-              </Button>
-            </div>
+            <Button
+              onClick={copyToClipboard}
+              className={`w-full ${
+                copied 
+                  ? "bg-green-600 hover:bg-green-700 text-white" 
+                  : "bg-primary hover:bg-primary/90 text-primary-foreground"
+              } shadow-lg hover:shadow-primary/25 transition-all`}
+            >
+              {copied ? (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Copied to Clipboard!
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copy Text
+                </>
+              )}
+            </Button>
           </div>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center text-muted-foreground">
-              <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-              <p className="text-sm">Select dates from your Google Calendar to generate availability text</p>
-              <p className="text-xs mt-2">Available slots will be automatically detected between 9 AM - 5 PM</p>
+          <div className="flex-1 flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Calendar className="h-8 w-8 text-primary/60" />
+              </div>
+              <p className="text-muted-foreground mb-2">Select dates from your calendar</p>
+              <p className="text-sm text-muted-foreground/70">Available slots will be automatically detected</p>
             </div>
           </div>
         )}

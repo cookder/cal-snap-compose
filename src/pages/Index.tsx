@@ -111,28 +111,30 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
-        <div className="container mx-auto px-2 py-2">
+      <header className="border-b border-border/20 bg-card/30 backdrop-blur-xl">
+        <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gmail-blue rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">G</span>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center shadow-lg">
+                <span className="text-primary-foreground font-bold text-lg">C</span>
               </div>
               <div>
-                <h1 className="text-xl font-semibold">Google Calendar Scheduler</h1>
-                <p className="text-sm text-muted-foreground">Find available time slots and generate scheduling text</p>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+                  Calendar AI
+                </h1>
+                <p className="text-sm text-muted-foreground">Intelligent scheduling assistant</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-sm">
-                <User className="h-4 w-4" />
+              <div className="hidden sm:flex items-center gap-2 text-sm bg-secondary/50 rounded-full px-3 py-2">
+                <User className="h-4 w-4 text-primary" />
                 <span className="text-muted-foreground">{user.email}</span>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleSignOut}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20"
               >
                 <LogOut className="h-4 w-4" />
                 Sign Out
@@ -143,16 +145,16 @@ const Index = () => {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-2 py-2">
+      <main className="container mx-auto px-6 py-8">
         {showInstructions && (
-          <div className="mb-2">
+          <div className="mb-8">
             <CalendarInstructions onDismiss={() => setShowInstructions(false)} />
           </div>
         )}
         
         {credentialsError && (
-          <div className="mb-2">
-            <Alert variant="destructive">
+          <div className="mb-8">
+            <Alert variant="destructive" className="bg-destructive/10 border-destructive/20">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 {credentialsError} Please check your Supabase secrets configuration.
@@ -161,7 +163,7 @@ const Index = () => {
           </div>
         )}
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 auto-rows-min">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 auto-rows-min">
           {/* Google Calendar View */}
           <div className="lg:col-span-1">
             {credentials ? (
@@ -170,17 +172,17 @@ const Index = () => {
                 credentials={credentials}
               />
             ) : (
-              <div className="h-full flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
-                <div className="text-center text-muted-foreground">
-                  <AlertCircle className="h-8 w-8 mx-auto mb-2" />
-                  <p className="text-sm">Waiting for Google OAuth credentials...</p>
+              <div className="h-full flex items-center justify-center border-2 border-dashed border-border/50 rounded-xl bg-card/30">
+                <div className="text-center text-muted-foreground p-8">
+                  <AlertCircle className="h-8 w-8 mx-auto mb-3 text-primary/50" />
+                  <p className="text-sm">Loading credentials...</p>
                 </div>
               </div>
             )}
           </div>
 
           {/* Availability Text Generator */}
-          <div className="lg:col-span-1">
+          <div className="xl:col-span-1">
             <GoogleAvailabilityGenerator 
               availability={availability}
               onTextGenerated={setAvailabilityText}
@@ -188,7 +190,7 @@ const Index = () => {
           </div>
 
           {/* Email Composer */}
-          <div className="lg:col-span-1">
+          <div className="xl:col-span-1">
             <EmailComposer 
               availabilityText={availabilityText}
               onInsertAvailability={() => {}}
@@ -197,7 +199,7 @@ const Index = () => {
         </div>
         
         {/* Feedback Section */}
-        <div className="mt-2 flex justify-center">
+        <div className="mt-12 flex justify-center">
           <FeedbackForm />
         </div>
       </main>
