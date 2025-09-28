@@ -18,6 +18,7 @@ const GoogleAvailabilityGenerator = lazy(() => import("@/components/GoogleAvaila
 const FeedbackForm = lazy(() => import("@/components/FeedbackForm").then(module => ({ default: module.FeedbackForm })));
 const CalendarInstructions = lazy(() => import("@/components/CalendarInstructions").then(module => ({ default: module.CalendarInstructions })));
 const ICSImporter = lazy(() => import("@/components/ICSImporter").then(module => ({ default: module.ICSImporter })));
+const ICSCalendarView = lazy(() => import("@/components/ICSCalendarView").then(module => ({ default: module.ICSCalendarView })));
 
 const Index = () => {
   // Force cache invalidation - Google Calendar integration active
@@ -129,6 +130,14 @@ const Index = () => {
     });
   };
 
+  const handleClearImportedEvents = () => {
+    setImportedEvents([]);
+    setAvailability([]); // Clear availability when clearing events
+    toast({
+      title: "Imported events cleared",
+    });
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -215,11 +224,21 @@ const Index = () => {
             )}
           </div>
 
-          {/* ICS Importer */}
+          {/* ICS Import and Calendar View */}
           <div className="lg:col-span-1">
-            <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
-              <ICSImporter onEventsImported={handleEventsImported} />
-            </Suspense>
+            {importedEvents.length === 0 ? (
+              <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
+                <ICSImporter onEventsImported={handleEventsImported} />
+              </Suspense>
+            ) : (
+              <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
+                <ICSCalendarView 
+                  events={importedEvents}
+                  onAvailabilityChange={setAvailability}
+                  onClearEvents={handleClearImportedEvents}
+                />
+              </Suspense>
+            )}
           </div>
 
           {/* Availability Text Generator */}
