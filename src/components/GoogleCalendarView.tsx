@@ -37,8 +37,32 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
       
       // Check if already authenticated
       checkAuthStatus(oauth);
+      
+      // Check for OAuth success flag (mobile compatibility)
+      const oauthSuccess = localStorage.getItem('google_oauth_success');
+      if (oauthSuccess === 'true') {
+        localStorage.removeItem('google_oauth_success');
+        setIsAuthenticated(true);
+        setError(null);
+        toast({
+          title: "Connected!",
+          description: "Successfully connected to Google Calendar.",
+        });
+      }
+      
+      // Check for OAuth error (mobile compatibility)
+      const oauthError = localStorage.getItem('google_oauth_error');
+      if (oauthError) {
+        localStorage.removeItem('google_oauth_error');
+        setError(oauthError);
+        toast({
+          title: "Authentication Failed",
+          description: oauthError,
+          variant: "destructive",
+        });
+      }
     }
-  }, [credentials]);
+  }, [credentials, toast]);
 
   const checkAuthStatus = async (oauth: GoogleOAuthService) => {
     try {
@@ -54,9 +78,24 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
   const handleGoogleLogin = () => {
     if (oauthService) {
       console.log('Initiating Google Calendar authentication...');
+      console.log('User agent:', navigator.userAgent);
+      console.log('Is mobile:', /Mobi|Android/i.test(navigator.userAgent));
+      
       const authUrl = oauthService.getAuthUrl();
       console.log('Redirecting to Google OAuth:', authUrl);
-      window.location.href = authUrl;
+      
+      // Clear any previous OAuth state
+      localStorage.removeItem('google_oauth_success');
+      localStorage.removeItem('google_oauth_error');
+      
+      // For mobile browsers, use a more reliable redirect method
+      if (/Mobi|Android/i.test(navigator.userAgent)) {
+        console.log('Using mobile-optimized redirect...');
+        // Use replace instead of href for better mobile compatibility
+        window.location.replace(authUrl);
+      } else {
+        window.location.href = authUrl;
+      }
     }
   };
 

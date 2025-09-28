@@ -34,12 +34,16 @@ class GoogleOAuthService {
       scope: this.scope,
       response_type: 'code',
       access_type: 'offline',
-      prompt: 'consent'
+      prompt: 'consent',
+      // Add mobile-specific parameters
+      include_granted_scopes: 'true',
+      state: Math.random().toString(36).substring(2, 15) // Add state for security
     });
 
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
     console.log('Generated Google OAuth URL:', authUrl);
     console.log('Using redirect URI:', this.redirectUri);
+    console.log('Is mobile device:', /Mobi|Android/i.test(navigator.userAgent));
     
     return authUrl;
   }

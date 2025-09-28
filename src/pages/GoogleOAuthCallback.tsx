@@ -15,17 +15,35 @@ const GoogleOAuthCallback = () => {
 
   useEffect(() => {
     const run = async () => {
-      console.log('OAuth callback processing started...');
+      console.log('OAuth callback processing started on mobile/desktop...');
+      console.log('Current URL:', window.location.href);
+      console.log('User agent:', navigator.userAgent);
+      
       const params = new URLSearchParams(window.location.search);
-      const error = params.get('error');
-      const errorDescription = params.get('error_description');
-      const code = params.get('code');
+      const hash = window.location.hash;
+      
+      // Check both URL params and hash (mobile browsers sometimes use hash)
+      let error = params.get('error');
+      let errorDescription = params.get('error_description');
+      let code = params.get('code');
+      
+      // If no params in search, check hash (common mobile issue)
+      if (!error && !code && hash) {
+        console.log('Checking hash for OAuth params:', hash);
+        const hashParams = new URLSearchParams(hash.substring(1));
+        error = hashParams.get('error');
+        errorDescription = hashParams.get('error_description');
+        code = hashParams.get('code');
+      }
 
       console.log('OAuth callback params:', { 
         hasError: !!error, 
         hasCode: !!code, 
         error, 
-        errorDescription 
+        errorDescription,
+        fullURL: window.location.href,
+        search: window.location.search,
+        hash: window.location.hash
       });
 
       if (error) {
@@ -44,7 +62,10 @@ const GoogleOAuthCallback = () => {
 
       if (!code) {
         console.log('No authorization code found, redirecting to home...');
-        navigate('/');
+        // On mobile, wait a bit longer in case the URL is still being processed
+        setTimeout(() => {
+          navigate('/');
+        }, 2000);
         return;
       }
 
@@ -68,21 +89,28 @@ const GoogleOAuthCallback = () => {
         oauth.saveTokens(tokens);
 
         console.log('Google Calendar connection successful!');
+        
+        // Set success flag in localStorage for mobile compatibility
+        localStorage.setItem('google_oauth_success', 'true');
+        
         toast({ 
           title: 'Connected to Google Calendar',
           description: 'You can now view your calendar availability.'
         });
         
-        // Clean up URL and go back to home after a short delay
+        // Clean up URL and go back to home with longer delay for mobile
         setTimeout(() => {
           window.history.replaceState({}, document.title, window.location.pathname);
-          navigate('/');
-        }, 1500);
+          navigate('/', { replace: true });
+        }, 2000);
         
       } catch (e: any) {
         console.error('OAuth callback processing failed:', e);
         const errorMsg = e?.message || 'Failed to complete Google authentication';
         setError(errorMsg);
+        
+        // Store error for debugging
+        localStorage.setItem('google_oauth_error', errorMsg);
         
         toast({
           title: 'Authentication Error',
@@ -93,7 +121,9 @@ const GoogleOAuthCallback = () => {
       }
     };
 
-    run();
+    // Delay execution slightly for mobile browsers
+    const timer = setTimeout(run, 100);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
