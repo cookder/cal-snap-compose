@@ -20,9 +20,9 @@ class GoogleOAuthService {
   constructor(credentials: OAuthCredentials) {
     this.clientId = credentials.clientId;
     this.clientSecret = credentials.clientSecret;
-    // Use the current origin and add a specific path for OAuth callback
-    this.redirectUri = `${window.location.origin}/`;
-    
+    // Dedicated callback route for reliability
+    this.redirectUri = `${window.location.origin}/google-oauth/callback`;
+
     // Log the redirect URI for debugging
     console.log('OAuth Redirect URI:', this.redirectUri);
   }
