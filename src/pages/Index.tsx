@@ -1,18 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent } from '@/components/ui/card';
 import { LogOut, User, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
-import { EmailComposer } from "@/components/EmailComposer";
-import GoogleCalendarView from "@/components/GoogleCalendarView";
-import { GoogleAvailabilityGenerator } from "@/components/GoogleAvailabilityGenerator";
-import { FeedbackForm } from "@/components/FeedbackForm";
-import { CalendarInstructions } from "@/components/CalendarInstructions";
 import { AvailableSlot } from "@/services/googleCalendarOAuth";
 import { OAuthCredentials } from "@/services/googleOAuth";
+
+// Lazy load components for better performance
+const EmailComposer = lazy(() => import("@/components/EmailComposer").then(module => ({ default: module.EmailComposer })));
+const GoogleCalendarView = lazy(() => import("@/components/GoogleCalendarView"));
+const GoogleAvailabilityGenerator = lazy(() => import("@/components/GoogleAvailabilityGenerator").then(module => ({ default: module.GoogleAvailabilityGenerator })));
+const FeedbackForm = lazy(() => import("@/components/FeedbackForm").then(module => ({ default: module.FeedbackForm })));
+const CalendarInstructions = lazy(() => import("@/components/CalendarInstructions").then(module => ({ default: module.CalendarInstructions })));
 
 const Index = () => {
   // Force cache invalidation - Google Calendar integration active
@@ -146,7 +149,9 @@ const Index = () => {
       <main className="container mx-auto px-2 py-2">
         {showInstructions && (
           <div className="mb-2">
-            <CalendarInstructions onDismiss={() => setShowInstructions(false)} />
+            <Suspense fallback={<div className="h-16 bg-muted animate-pulse rounded-lg" />}>
+              <CalendarInstructions onDismiss={() => setShowInstructions(false)} />
+            </Suspense>
           </div>
         )}
         
@@ -165,10 +170,12 @@ const Index = () => {
           {/* Google Calendar View */}
           <div className="lg:col-span-1">
             {credentials ? (
-              <GoogleCalendarView 
-                onAvailabilityChange={setAvailability} 
-                credentials={credentials}
-              />
+              <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
+                <GoogleCalendarView 
+                  onAvailabilityChange={setAvailability} 
+                  credentials={credentials}
+                />
+              </Suspense>
             ) : (
               <div className="h-full flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
                 <div className="text-center text-muted-foreground">
@@ -181,24 +188,30 @@ const Index = () => {
 
           {/* Availability Text Generator */}
           <div className="lg:col-span-1">
-            <GoogleAvailabilityGenerator 
-              availability={availability}
-              onTextGenerated={setAvailabilityText}
-            />
+            <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
+              <GoogleAvailabilityGenerator 
+                availability={availability}
+                onTextGenerated={setAvailabilityText}
+              />
+            </Suspense>
           </div>
 
           {/* Email Composer */}
           <div className="lg:col-span-1">
-            <EmailComposer 
-              availabilityText={availabilityText}
-              onInsertAvailability={() => {}}
-            />
+            <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
+              <EmailComposer 
+                availabilityText={availabilityText}
+                onInsertAvailability={() => {}}
+              />
+            </Suspense>
           </div>
         </div>
         
         {/* Feedback Section */}
         <div className="mt-2 flex justify-center">
-          <FeedbackForm />
+          <Suspense fallback={<div className="h-32 w-96 bg-muted animate-pulse rounded-lg" />}>
+            <FeedbackForm />
+          </Suspense>
         </div>
       </main>
     </div>
