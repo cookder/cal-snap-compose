@@ -81,8 +81,8 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
           // Only add slot if it's the full duration
           if (slotEnd.getTime() - currentTime.getTime() >= slotDuration * 60 * 1000) {
             timeSlots.push({
-              start: format(currentTime, 'HH:mm'),
-              end: format(slotEnd, 'HH:mm'),
+              start: format(currentTime, 'h:mm a'),
+              end: format(slotEnd, 'h:mm a'),
               startTime: new Date(currentTime),
               endTime: new Date(slotEnd)
             });
@@ -105,8 +105,8 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
         // Only add slot if it's the full duration
         if (slotEnd.getTime() - currentTime.getTime() >= slotDuration * 60 * 1000) {
           timeSlots.push({
-            start: format(currentTime, 'HH:mm'),
-            end: format(slotEnd, 'HH:mm'),
+            start: format(currentTime, 'h:mm a'),
+            end: format(slotEnd, 'h:mm a'),
             startTime: new Date(currentTime),
             endTime: new Date(slotEnd)
           });
@@ -245,8 +245,8 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
               dayEvents.forEach(event => {
                 timeline.push({
                   type: 'event',
-                  start: format(event.start, 'HH:mm'),
-                  end: format(event.end, 'HH:mm'),
+                  start: format(event.start, 'h:mm a'),
+                  end: format(event.end, 'h:mm a'),
                   startTime: event.start,
                   endTime: event.end,
                   title: event.summary,
@@ -258,8 +258,8 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
               daySlots.slots.forEach(slot => {
                 timeline.push({
                   type: 'slot',
-                  start: slot.start,
-                  end: slot.end,
+                  start: format(slot.startTime, 'h:mm a'),
+                  end: format(slot.endTime, 'h:mm a'),
                   startTime: slot.startTime,
                   endTime: slot.endTime
                 });
