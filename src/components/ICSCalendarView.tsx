@@ -239,18 +239,24 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
                 endTime: Date;
                 title?: string;
                 data?: any;
+                isAllDay?: boolean;
               }> = [];
 
               // Add events to timeline
               dayEvents.forEach(event => {
+                // Check if it's an all-day event (starts and ends at midnight)
+                const isAllDay = event.start.getHours() === 0 && event.start.getMinutes() === 0 && 
+                                event.end.getHours() === 0 && event.end.getMinutes() === 0;
+                
                 timeline.push({
                   type: 'event',
-                  start: format(event.start, 'h:mm a'),
-                  end: format(event.end, 'h:mm a'),
+                  start: isAllDay ? 'All-day' : format(event.start, 'h:mm a'),
+                  end: isAllDay ? '' : format(event.end, 'h:mm a'),
                   startTime: event.start,
                   endTime: event.end,
                   title: event.summary,
-                  data: event
+                  data: event,
+                  isAllDay
                 });
               });
 
@@ -265,8 +271,14 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
                 });
               });
 
-              // Sort timeline by start time
-              timeline.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+              // Sort timeline by type (all-day events first) then by start time
+              timeline.sort((a, b) => {
+                // All-day events come first
+                if (a.isAllDay && !b.isAllDay) return -1;
+                if (!a.isAllDay && b.isAllDay) return 1;
+                // Then sort by start time
+                return a.startTime.getTime() - b.startTime.getTime();
+              });
 
               return (
                 <div key={daySlots.date.toISOString()} className="border rounded-lg p-3 bg-muted/20">
@@ -304,7 +316,7 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
                               item.type === 'event' ? "bg-red-400" : "bg-green-400"
                             )} />
                             <span className="text-sm font-medium">
-                              {item.start} - {item.end}
+                              {item.isAllDay ? item.start : `${item.start} - ${item.end}`}
                             </span>
                             {item.type === 'event' && item.title && (
                               <span className="text-xs text-muted-foreground">
