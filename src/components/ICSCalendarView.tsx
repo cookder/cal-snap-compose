@@ -28,6 +28,7 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [slotDuration, setSlotDuration] = useState<30 | 60>(30);
   const [availability, setAvailability] = useState<AvailableSlot[]>([]);
+  const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
 
   // Get events for a specific date
   const getEventsForDate = (date: Date) => {
@@ -42,6 +43,7 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
   const generateAvailability = () => {
     if (selectedDates.length === 0) {
       setAvailability([]);
+      setSelectedSlots(new Set());
       onAvailabilityChange([]);
       return;
     }
@@ -122,7 +124,49 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
     }
 
     setAvailability(availableSlots);
+    
+    // Auto-select all new slots by default
+    const newSlotIds = new Set<string>();
+    availableSlots.forEach(daySlots => {
+      daySlots.slots.forEach(slot => {
+        const slotId = `${daySlots.date.toISOString()}-${slot.startTime.getTime()}`;
+        newSlotIds.add(slotId);
+      });
+    });
+    setSelectedSlots(newSlotIds);
+    
+    // Send all slots initially (all selected by default)
     onAvailabilityChange(availableSlots);
+  };
+
+  // Generate slot ID for tracking selection
+  const getSlotId = (date: Date, slot: TimeSlot) => {
+    return `${date.toISOString()}-${slot.startTime.getTime()}`;
+  };
+
+  // Toggle slot selection
+  const toggleSlotSelection = (date: Date, slot: TimeSlot) => {
+    const slotId = getSlotId(date, slot);
+    setSelectedSlots(prev => {
+      const newSelected = new Set(prev);
+      if (newSelected.has(slotId)) {
+        newSelected.delete(slotId);
+      } else {
+        newSelected.add(slotId);
+      }
+      
+      // Update availability with only selected slots
+      const filteredAvailability = availability.map(daySlots => ({
+        ...daySlots,
+        slots: daySlots.slots.filter(s => {
+          const id = getSlotId(daySlots.date, s);
+          return newSelected.has(id);
+        })
+      })).filter(daySlots => daySlots.slots.length > 0);
+      
+      onAvailabilityChange(filteredAvailability);
+      return newSelected;
+    });
   };
 
   // Auto-generate availability when dates or slot duration changes
@@ -240,6 +284,7 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
                 title?: string;
                 data?: any;
                 isAllDay?: boolean;
+                isSelected?: boolean;
               }> = [];
 
               // Add events to timeline
@@ -262,12 +307,15 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
 
               // Add available slots to timeline
               daySlots.slots.forEach(slot => {
+                const slotId = getSlotId(daySlots.date, slot);
+                const isSelected = selectedSlots.has(slotId);
                 timeline.push({
                   type: 'slot',
                   start: format(slot.startTime, 'h:mm a'),
                   end: format(slot.endTime, 'h:mm a'),
                   startTime: slot.startTime,
-                  endTime: slot.endTime
+                  endTime: slot.endTime,
+                  isSelected
                 });
               });
 
@@ -307,13 +355,28 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
                             "flex items-center justify-between p-2 rounded-md",
                             item.type === 'event' 
                               ? "bg-red-50 border border-red-200" 
-                              : "bg-green-50 border border-green-200"
+                              : item.isSelected
+                                ? "bg-green-50 border border-green-200 cursor-pointer hover:bg-green-100"
+                                : "bg-gray-50 border border-gray-200 cursor-pointer hover:bg-gray-100 opacity-60"
                           )}
+                          onClick={item.type === 'slot' ? () => {
+                            const slot = daySlots.slots.find(s => 
+                              format(s.startTime, 'h:mm a') === item.start && 
+                              format(s.endTime, 'h:mm a') === item.end
+                            );
+                            if (slot) {
+                              toggleSlotSelection(daySlots.date, slot);
+                            }
+                          } : undefined}
                         >
                           <div className="flex items-center gap-2">
                             <div className={cn(
                               "w-2 h-2 rounded-full",
-                              item.type === 'event' ? "bg-red-400" : "bg-green-400"
+                              item.type === 'event' 
+                                ? "bg-red-400" 
+                                : item.isSelected 
+                                  ? "bg-green-400" 
+                                  : "bg-gray-400"
                             )} />
                             <span className="text-sm font-medium">
                               {item.isAllDay ? item.start : `${item.start} - ${item.end}`}
@@ -330,10 +393,12 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
                               "text-xs",
                               item.type === 'event' 
                                 ? "bg-red-100 text-red-800 border-red-300" 
-                                : "bg-green-100 text-green-800 border-green-300"
+                                : item.isSelected
+                                  ? "bg-green-100 text-green-800 border-green-300"
+                                  : "bg-gray-100 text-gray-600 border-gray-300"
                             )}
                           >
-                            {item.type === 'event' ? 'Busy' : 'Available'}
+                            {item.type === 'event' ? 'Busy' : (item.isSelected ? 'Selected' : 'Available')}
                           </Badge>
                         </div>
                       ))
