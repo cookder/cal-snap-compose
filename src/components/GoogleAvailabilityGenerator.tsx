@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Copy, FileText, CheckCircle, Calendar } from "lucide-react";
 import { format, isToday, isTomorrow } from "date-fns";
-import { AvailableSlot } from "@/services/googleCalendar";
+import { AvailableSlot } from "@/services/googleCalendarOAuth";
 
 interface GoogleAvailabilityGeneratorProps {
   availability: AvailableSlot[];

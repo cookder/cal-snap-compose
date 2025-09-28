@@ -3,11 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Clock, MapPin, FileText, Trash2 } from 'lucide-react';
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay, isSameDay } from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CalendarIcon, Clock, FileText, Trash2, RefreshCw } from 'lucide-react';
+import { format, isSameDay, startOfDay, endOfDay, isToday, isTomorrow, addMinutes } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { AvailableSlot } from '@/services/googleCalendarOAuth';
+import { AvailableSlot, TimeSlot } from '@/services/googleCalendarOAuth';
 
 interface CalendarEvent {
   id: string;
@@ -25,11 +25,9 @@ interface ICSCalendarViewProps {
 }
 
 export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }: ICSCalendarViewProps) {
-  const [selectedDate, setSelectedDate] = useState<Date>();
-  const [selectedTimeRange, setSelectedTimeRange] = useState<{start: string, end: string}>({
-    start: '09:00',
-    end: '17:00'
-  });
+  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const [slotDuration, setSlotDuration] = useState<30 | 60>(30);
+  const [availability, setAvailability] = useState<AvailableSlot[]>([]);
 
   // Get events for a specific date
   const getEventsForDate = (date: Date) => {
@@ -40,73 +38,115 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
     );
   };
 
-  // Generate availability based on selected date and events
+  // Generate availability for all selected dates
   const generateAvailability = () => {
-    if (!selectedDate) return;
-
-    const dayEvents = getEventsForDate(selectedDate);
-    const timeSlots: any[] = [];
-
-    // Parse time range
-    const [startHour, startMinute] = selectedTimeRange.start.split(':').map(Number);
-    const [endHour, endMinute] = selectedTimeRange.end.split(':').map(Number);
-    
-    const dayStart = new Date(selectedDate);
-    dayStart.setHours(startHour, startMinute, 0, 0);
-    
-    const dayEnd = new Date(selectedDate);
-    dayEnd.setHours(endHour, endMinute, 0, 0);
-
-    // Sort events by start time
-    const sortedEvents = dayEvents
-      .filter(event => event.start < dayEnd && event.end > dayStart)
-      .sort((a, b) => a.start.getTime() - b.start.getTime());
-
-    let currentTime = dayStart;
-
-    // Find gaps between events
-    for (const event of sortedEvents) {
-      const eventStart = new Date(Math.max(event.start.getTime(), dayStart.getTime()));
-      const eventEnd = new Date(Math.min(event.end.getTime(), dayEnd.getTime()));
-
-      // Add availability slot before this event if there's a gap
-      if (currentTime < eventStart) {
-        timeSlots.push({
-          start: format(currentTime, 'HH:mm'),
-          end: format(eventStart, 'HH:mm'),
-          startTime: new Date(currentTime),
-          endTime: new Date(eventStart)
-        });
-      }
-
-      // Move current time to after this event
-      currentTime = new Date(Math.max(currentTime.getTime(), eventEnd.getTime()));
+    if (selectedDates.length === 0) {
+      setAvailability([]);
+      onAvailabilityChange([]);
+      return;
     }
 
-    // Add final slot if there's time remaining
-    if (currentTime < dayEnd) {
-      timeSlots.push({
-        start: format(currentTime, 'HH:mm'),
-        end: format(dayEnd, 'HH:mm'),
-        startTime: new Date(currentTime),
-        endTime: new Date(dayEnd)
+    const availableSlots: AvailableSlot[] = [];
+
+    for (const selectedDate of selectedDates) {
+      const dayEvents = getEventsForDate(selectedDate);
+      const timeSlots: TimeSlot[] = [];
+
+      // Working hours: 9 AM to 5 PM (standard business hours)
+      const dayStart = new Date(selectedDate);
+      dayStart.setHours(9, 0, 0, 0);
+      
+      const dayEnd = new Date(selectedDate);
+      dayEnd.setHours(17, 0, 0, 0);
+
+      // Sort events by start time
+      const sortedEvents = dayEvents
+        .filter(event => event.start < dayEnd && event.end > dayStart)
+        .sort((a, b) => a.start.getTime() - b.start.getTime());
+
+      let currentTime = dayStart;
+
+      // Find gaps between events and create slots based on duration
+      for (const event of sortedEvents) {
+        const eventStart = new Date(Math.max(event.start.getTime(), dayStart.getTime()));
+        const eventEnd = new Date(Math.min(event.end.getTime(), dayEnd.getTime()));
+
+        // Generate slots before this event if there's a gap
+        while (currentTime < eventStart) {
+          const slotEnd = new Date(Math.min(
+            addMinutes(currentTime, slotDuration).getTime(),
+            eventStart.getTime()
+          ));
+
+          // Only add slot if it's the full duration
+          if (slotEnd.getTime() - currentTime.getTime() >= slotDuration * 60 * 1000) {
+            timeSlots.push({
+              start: format(currentTime, 'HH:mm'),
+              end: format(slotEnd, 'HH:mm'),
+              startTime: new Date(currentTime),
+              endTime: new Date(slotEnd)
+            });
+          }
+
+          currentTime = addMinutes(currentTime, slotDuration);
+        }
+
+        // Move current time to after this event
+        currentTime = new Date(Math.max(currentTime.getTime(), eventEnd.getTime()));
+      }
+
+      // Generate remaining slots after all events
+      while (currentTime < dayEnd) {
+        const slotEnd = new Date(Math.min(
+          addMinutes(currentTime, slotDuration).getTime(),
+          dayEnd.getTime()
+        ));
+
+        // Only add slot if it's the full duration
+        if (slotEnd.getTime() - currentTime.getTime() >= slotDuration * 60 * 1000) {
+          timeSlots.push({
+            start: format(currentTime, 'HH:mm'),
+            end: format(slotEnd, 'HH:mm'),
+            startTime: new Date(currentTime),
+            endTime: new Date(slotEnd)
+          });
+        }
+
+        currentTime = addMinutes(currentTime, slotDuration);
+      }
+
+      availableSlots.push({
+        date: selectedDate,
+        slots: timeSlots
       });
     }
 
-    const availability: AvailableSlot[] = [{
-      date: selectedDate,
-      slots: timeSlots
-    }];
-
-    onAvailabilityChange(availability);
+    setAvailability(availableSlots);
+    onAvailabilityChange(availableSlots);
   };
 
-  // Auto-generate availability when date or time range changes
+  // Auto-generate availability when dates or slot duration changes
   useEffect(() => {
-    if (selectedDate) {
-      generateAvailability();
-    }
-  }, [selectedDate, selectedTimeRange, events]);
+    generateAvailability();
+  }, [selectedDates, slotDuration, events]);
+
+  // Remove a selected date
+  const removeDate = (dateToRemove: Date) => {
+    setSelectedDates(prev => prev.filter(d => !isSameDay(d, dateToRemove)));
+  };
+
+  // Handle slot duration change
+  const handleSlotDurationChange = (value: string) => {
+    const newDuration = parseInt(value) as 30 | 60;
+    setSlotDuration(newDuration);
+  };
+
+  // Format date for display
+  const formatDateDisplay = (date: Date) => {
+    if (isToday(date)) return "Today";
+    if (isTomorrow(date)) return "Tomorrow";
+    return format(date, "MMM d");
+  };
 
   // Get dates that have events for calendar styling
   const eventDates = events.map(event => startOfDay(event.start));
@@ -130,38 +170,57 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="shadow-md">
+      <CardHeader className="pb-1 pt-3">
         <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5" />
+          <div className="flex items-center gap-2 text-sm">
+            <CalendarIcon className="h-4 w-4" />
             Imported Calendar
           </div>
           <Button
             variant="outline"
             size="sm"
             onClick={onClearEvents}
-            className="flex items-center gap-1"
+            className="h-6 px-2 text-xs flex items-center gap-1"
           >
             <Trash2 className="h-3 w-3" />
             Clear
           </Button>
         </CardTitle>
-        <CardDescription>
-          {events.length} events imported. Select a date to find available time slots.
+        <CardDescription className="text-xs">
+          {events.length} events imported. Select dates to find available time slots.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-2 pt-2">
+        {/* Slot Duration Selection */}
+        <div className="space-y-1">
+          <label className="text-xs font-medium">Meeting Duration</label>
+          <Select value={slotDuration.toString()} onValueChange={handleSlotDurationChange}>
+            <SelectTrigger className="w-[140px] h-7 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="30">30 min</SelectItem>
+              <SelectItem value="60">60 min</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Calendar */}
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">Select Date</h4>
+        <div className="space-y-1">
+          <label className="text-xs font-medium">Select Available Dates</label>
           <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={setSelectedDate}
-            className={cn("rounded-md border pointer-events-auto")}
+            mode="multiple"
+            selected={selectedDates}
+            onSelect={(dates) => {
+              if (dates) {
+                setSelectedDates(dates.sort((a, b) => a.getTime() - b.getTime()));
+              }
+            }}
+            disabled={(date) => date < new Date()}
+            className={cn("rounded-md border text-xs p-1 pointer-events-auto")}
             modifiers={{
-              hasEvents: uniqueEventDates
+              hasEvents: events.map(event => startOfDay(event.start))
             }}
             modifiersStyles={{
               hasEvents: { 
@@ -173,60 +232,62 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
           />
         </div>
 
-        {/* Time Range Selection */}
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">Working Hours</h4>
-          <div className="flex items-center gap-2">
-            <input
-              type="time"
-              value={selectedTimeRange.start}
-              onChange={(e) => setSelectedTimeRange(prev => ({ ...prev, start: e.target.value }))}
-              className="px-2 py-1 border rounded text-sm"
-            />
-            <span className="text-sm text-muted-foreground">to</span>
-            <input
-              type="time"
-              value={selectedTimeRange.end}
-              onChange={(e) => setSelectedTimeRange(prev => ({ ...prev, end: e.target.value }))}
-              className="px-2 py-1 border rounded text-sm"
-            />
-          </div>
-        </div>
-
-        {/* Selected Date Events */}
-        {selectedDate && (
+        {/* Available Slots Display */}
+        {selectedDates.length > 0 && (
           <div className="space-y-2">
-            <h4 className="text-sm font-medium">
-              Events on {format(selectedDate, 'MMMM d, yyyy')}
-            </h4>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {getEventsForDate(selectedDate).map((event) => (
-                <div key={event.id} className="p-3 border rounded-lg bg-muted/50">
-                  <div className="font-medium text-sm">{event.summary}</div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                    <Clock className="h-3 w-3" />
-                    {format(event.start, 'HH:mm')} - {format(event.end, 'HH:mm')}
+            <h3 className="text-sm font-semibold">Available Time Slots</h3>
+            
+            {availability.map((daySlots) => {
+              const dayEvents = getEventsForDate(daySlots.date);
+              return (
+                <div key={daySlots.date.toISOString()} className="space-y-1 border-b border-border pb-1 mb-1">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-medium flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {formatDateDisplay(daySlots.date)} ({format(daySlots.date, "EEE, MMM d")})
+                    </h4>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeDate(daySlots.date)}
+                      className="h-5 px-1 text-xs"
+                    >
+                      Remove
+                    </Button>
                   </div>
-                  {event.location && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                      <MapPin className="h-3 w-3" />
-                      {event.location}
+                  
+                  {/* Show existing events */}
+                  {dayEvents.length > 0 && (
+                    <div className="mb-2">
+                      <p className="text-xs text-muted-foreground mb-1">Existing events:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {dayEvents.map((event, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {event.summary} ({format(event.start, 'h:mm a')} - {format(event.end, 'h:mm a')})
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
                   )}
-                  {event.description && (
-                    <div className="flex items-start gap-2 text-xs text-muted-foreground mt-1">
-                      <FileText className="h-3 w-3 mt-0.5" />
-                      <span className="line-clamp-2">{event.description}</span>
+
+                  {/* Show available slots */}
+                  {daySlots.slots.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {daySlots.slots.map((slot, index) => (
+                        <Badge
+                          key={index}
+                          className="bg-green-100 text-green-800 border-green-300"
+                        >
+                          {slot.start} - {slot.end}
+                        </Badge>
+                      ))}
                     </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No available slots for this day</p>
                   )}
                 </div>
-              ))}
-              {getEventsForDate(selectedDate).length === 0 && (
-                <div className="text-sm text-muted-foreground text-center py-4">
-                  No events on this date
-                </div>
-              )}
-            </div>
+              );
+            })}
           </div>
         )}
       </CardContent>
