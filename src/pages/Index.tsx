@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { LogOut, User, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { AvailableSlot } from "@/services/googleCalendarOAuth";
 import { OAuthCredentials } from "@/services/googleOAuth";
@@ -16,6 +17,7 @@ const GoogleCalendarView = lazy(() => import("@/components/GoogleCalendarView"))
 const GoogleAvailabilityGenerator = lazy(() => import("@/components/GoogleAvailabilityGenerator").then(module => ({ default: module.GoogleAvailabilityGenerator })));
 const FeedbackForm = lazy(() => import("@/components/FeedbackForm").then(module => ({ default: module.FeedbackForm })));
 const CalendarInstructions = lazy(() => import("@/components/CalendarInstructions").then(module => ({ default: module.CalendarInstructions })));
+const ICSImporter = lazy(() => import("@/components/ICSImporter").then(module => ({ default: module.ICSImporter })));
 
 const Index = () => {
   // Force cache invalidation - Google Calendar integration active
@@ -26,6 +28,7 @@ const Index = () => {
   const [credentials, setCredentials] = useState<OAuthCredentials | null>(null);
   const [credentialsError, setCredentialsError] = useState<string | null>(null);
   const [showInstructions, setShowInstructions] = useState(true);
+  const [importedEvents, setImportedEvents] = useState<any[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -100,6 +103,14 @@ const Index = () => {
     }
   };
 
+  const handleEventsImported = (events: any[]) => {
+    setImportedEvents(events);
+    toast({
+      title: "Events imported successfully",
+      description: `Imported ${events.length} events from ICS file`,
+    });
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -166,7 +177,7 @@ const Index = () => {
           </div>
         )}
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 auto-rows-min">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-2 auto-rows-min">
           {/* Google Calendar View */}
           <div className="lg:col-span-1">
             {credentials ? (
@@ -184,6 +195,13 @@ const Index = () => {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* ICS Importer */}
+          <div className="lg:col-span-1">
+            <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
+              <ICSImporter onEventsImported={handleEventsImported} />
+            </Suspense>
           </div>
 
           {/* Availability Text Generator */}
