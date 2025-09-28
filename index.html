@@ -7,6 +7,15 @@
     <meta name="description" content="Generate availability text for meeting scheduling with Gmail integration" />
     <meta name="author" content="Gmail Plugin" />
 
+    <!-- Preconnect to external origins for faster loading -->
+    <link rel="preconnect" href="https://accounts.google.com" />
+    <link rel="preconnect" href="https://www.googleapis.com" />
+    <link rel="preconnect" href="https://zlrratamkejbxlzmhkyr.supabase.co" />
+    
+    <!-- Preload critical resources -->
+    <link rel="modulepreload" href="/src/main.tsx" />
+    <link rel="preload" href="/src/index.css" as="style" />
+
     <meta property="og:title" content="Gmail Calendar Integration Plugin" />
     <meta property="og:description" content="Generate availability text for meeting scheduling with Gmail integration" />
     <meta property="og:type" content="website" />
