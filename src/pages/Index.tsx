@@ -14,6 +14,7 @@ import { CalendarInstructions } from "@/components/CalendarInstructions";
 import { AvailableSlot } from "@/services/googleCalendar";
 
 const Index = () => {
+  // Force cache invalidation - Google Calendar integration active
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [availability, setAvailability] = useState<AvailableSlot[]>([]);
