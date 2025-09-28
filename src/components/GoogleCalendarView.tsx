@@ -266,24 +266,50 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
 
         {/* Slot Duration Selection */}
         {isAuthenticated && (
-          <div className="space-y-1">
-            <label className="text-xs font-medium">Meeting Duration</label>
-            <Select value={slotDuration.toString()} onValueChange={handleSlotDurationChange}>
-              <SelectTrigger className="w-[140px] h-7 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="30">30 min</SelectItem>
-                <SelectItem value="60">60 min</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="space-y-3 bg-secondary/20 p-4 rounded-lg border border-border/30">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-primary" />
+              <label className="text-sm font-medium text-foreground">Meeting Duration</label>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant={slotDuration === 30 ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleSlotDurationChange("30")}
+                className={`flex-1 ${slotDuration === 30 
+                  ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-md' 
+                  : 'border-border/30 hover:bg-primary/10 hover:border-primary/30'
+                } transition-all`}
+              >
+                <Clock className="h-3 w-3 mr-1" />
+                30 min
+              </Button>
+              <Button 
+                variant={slotDuration === 60 ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleSlotDurationChange("60")}
+                className={`flex-1 ${slotDuration === 60 
+                  ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-md' 
+                  : 'border-border/30 hover:bg-primary/10 hover:border-primary/30'
+                } transition-all`}
+              >
+                <Clock className="h-3 w-3 mr-1" />
+                1 hour
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Choose your preferred meeting slot duration for availability detection
+            </p>
           </div>
         )}
 
         {/* Calendar */}
         {isAuthenticated && (
-          <div className="space-y-1">
-            <label className="text-xs font-medium">Select Available Dates</label>
+          <div className="space-y-3 bg-secondary/20 p-4 rounded-lg border border-border/30">
+            <div className="flex items-center gap-2">
+              <CalendarIcon className="h-4 w-4 text-primary" />
+              <label className="text-sm font-medium text-foreground">Select Available Dates</label>
+            </div>
             <Calendar
               mode="multiple"
               selected={selectedDates}
@@ -293,8 +319,33 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                 }
               }}
               disabled={(date) => date < new Date()}
-              className="rounded-md border text-xs p-1"
+              className="rounded-lg border border-border/30 bg-card/30 text-sm p-3 mx-auto"
+              classNames={{
+                months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                month: "space-y-4",
+                caption: "flex justify-center pt-1 relative items-center",
+                caption_label: "text-sm font-medium",
+                nav: "space-x-1 flex items-center",
+                nav_button: "h-7 w-7 bg-transparent p-0 hover:bg-primary/10 transition-colors",
+                nav_button_previous: "absolute left-1",
+                nav_button_next: "absolute right-1",
+                table: "w-full border-collapse space-y-1",
+                head_row: "flex",
+                head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]",
+                row: "flex w-full mt-2",
+                cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-primary/10 [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:rounded-l-md first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                day: "h-8 w-8 p-0 font-normal aria-selected:opacity-100 hover:bg-primary/20 transition-colors rounded-md",
+                day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                day_today: "bg-accent text-accent-foreground",
+                day_outside: "text-muted-foreground opacity-50",
+                day_disabled: "text-muted-foreground opacity-50",
+                day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+                day_hidden: "invisible",
+              }}
             />
+            <p className="text-xs text-muted-foreground">
+              Select multiple dates to find available {slotDuration}-minute time slots
+            </p>
           </div>
         )}
 
