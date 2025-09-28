@@ -219,16 +219,6 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
             }}
             disabled={(date) => date < new Date()}
             className={cn("rounded-md border text-xs p-1 pointer-events-auto")}
-            modifiers={{
-              hasEvents: events.map(event => startOfDay(event.start))
-            }}
-            modifiersStyles={{
-              hasEvents: { 
-                backgroundColor: 'hsl(var(--primary))', 
-                color: 'hsl(var(--primary-foreground))',
-                fontWeight: 'bold'
-              }
-            }}
           />
         </div>
 
