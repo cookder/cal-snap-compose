@@ -291,13 +291,13 @@ export function TimeSlotDisplay({
                                                    durationMinutes <= 60 ? 'h-32' : 
                                                    durationMinutes <= 90 ? 'h-48' : 'h-64';
                                  
-                                 return (
-                                   <div key={index} className={`flex items-center justify-center border-r border-muted/30 ${heightClass} bg-muted/10 rounded-l-md px-1`}>
-                                    <span className="transform -rotate-90 whitespace-nowrap text-xs font-bold font-mono">
-                                      {timeRange}
-                                    </span>
-                                   </div>
-                                 );
+                                  return (
+                                    <div key={index} className={`flex items-center justify-center border border-muted/40 ${heightClass} bg-muted/10 rounded-l-md px-1 mb-1 shadow-sm`}>
+                                      <span className="transform -rotate-90 whitespace-nowrap text-xs font-bold font-mono">
+                                        {timeRange}
+                                      </span>
+                                    </div>
+                                  );
                                });
                              })()}
                            </div>
