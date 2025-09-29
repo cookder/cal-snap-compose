@@ -261,19 +261,22 @@ export function TimeSlotDisplay({
                                  }
                                }
                                
-                               return timeRanges.map((timeRange, index) => {
-                                 let durationMinutes = 30; // default for height calculation
-                                 if (groupedItems[index] && groupedItems[index].length > 0) {
-                                   const firstItem = groupedItems[index][0];
-                                   if (firstItem.type === 'available') {
-                                     const [startHour, startMin] = firstItem.start.split(':').map(Number);
-                                     const [endHour, endMin] = firstItem.end.split(':').map(Number);
-                                     durationMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-                                   } else {
-                                     durationMinutes = parseInt(firstItem.end.split(':')[0]) * 60 + parseInt(firstItem.end.split(':')[1]) - 
-                                       (parseInt(firstItem.start.split(':')[0]) * 60 + parseInt(firstItem.start.split(':')[1]));
-                                   }
-                                 }
+                                return timeRanges.map((timeRange, index) => {
+                                  let durationMinutes = 30; // default for height calculation
+                                  if (groupedItems[index] && groupedItems[index].length > 0) {
+                                    const firstItem = groupedItems[index][0];
+                                    if (firstItem.type === 'available') {
+                                      // Parse AM/PM format properly
+                                      const startDate = new Date(`1970-01-01 ${firstItem.start}`);
+                                      const endDate = new Date(`1970-01-01 ${firstItem.end}`);
+                                      durationMinutes = (endDate.getTime() - startDate.getTime()) / (1000 * 60);
+                                    } else {
+                                      // For busy events, calculate from actual Date objects
+                                      const endTime = new Date(`1970-01-01 ${firstItem.end}`);
+                                      const startTime = new Date(`1970-01-01 ${firstItem.start}`);
+                                      durationMinutes = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
+                                    }
+                                  }
                                  
                                  const heightClass = durationMinutes <= 15 ? 'h-8' : 
                                                    durationMinutes <= 30 ? 'h-16' : 
@@ -293,20 +296,19 @@ export function TimeSlotDisplay({
                            
                            {/* Main grid content */}
                            <div className="grid grid-cols-4 gap-1 items-start flex-1">
-                           {allItems.map((item, index) => {
-                             let durationMinutes = 30; // default
-                             if (item.type === 'available') {
-                               // Calculate duration from time strings
-                               const [startHour, startMin] = item.start.split(':').map(Number);
-                               const [endHour, endMin] = item.end.split(':').map(Number);
-                               durationMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-                             } else {
-                               // Calculate duration from Date objects for busy events
-                               const durationMs = item.startTime.getTime() - item.startTime.getTime();
-                               durationMinutes = Math.round(durationMs / (1000 * 60)) || 
-                                 parseInt(item.end.split(':')[0]) * 60 + parseInt(item.end.split(':')[1]) - 
-                                 (parseInt(item.start.split(':')[0]) * 60 + parseInt(item.start.split(':')[1]));
-                             }
+                            {allItems.map((item, index) => {
+                              let durationMinutes = 30; // default
+                              if (item.type === 'available') {
+                                // Parse AM/PM format properly for available slots
+                                const startDate = new Date(`1970-01-01 ${item.start}`);
+                                const endDate = new Date(`1970-01-01 ${item.end}`);
+                                durationMinutes = (endDate.getTime() - startDate.getTime()) / (1000 * 60);
+                              } else {
+                                // For busy events, calculate from actual Date objects
+                                const endTime = new Date(`1970-01-01 ${item.end}`);
+                                const startTime = new Date(`1970-01-01 ${item.start}`);
+                                durationMinutes = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
+                              }
                              
                              // Proportional heights: 15min=h-8, 30min=h-16, 60min=h-32, 90min=h-48, 120min=h-64
                              const heightClass = durationMinutes <= 15 ? 'h-8' : 
