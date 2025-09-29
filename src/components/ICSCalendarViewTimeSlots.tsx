@@ -22,7 +22,6 @@ interface TimeSlotDisplayProps {
   toggleSlotSelection: (slotId: string) => void;
   removeDate: (date: Date) => void;
   formatDateDisplay: (date: Date) => string;
-  toggleAllSlots?: (date: Date) => void;
 }
 
 export function TimeSlotDisplay({
@@ -33,8 +32,7 @@ export function TimeSlotDisplay({
   generateSlotsForDuration,
   toggleSlotSelection,
   removeDate,
-  formatDateDisplay,
-  toggleAllSlots
+  formatDateDisplay
 }: TimeSlotDisplayProps) {
   if (availability.length === 0) return null;
 
@@ -52,26 +50,14 @@ export function TimeSlotDisplay({
                   <Clock className="h-3 w-3" />
                   {formatDateDisplay(daySlots.date)} ({format(daySlots.date, "EEE, MMM d")})
                 </h4>
-                <div className="flex items-center gap-1">
-                  {toggleAllSlots && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => toggleAllSlots(daySlots.date)}
-                      className="h-5 px-2 text-xs"
-                    >
-                      {daySlots.slots.every(s => s.selected) ? 'Deselect All' : 'Select All'}
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeDate(daySlots.date)}
-                    className="h-5 px-1 text-xs"
-                  >
-                    Remove
-                  </Button>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeDate(daySlots.date)}
+                  className="h-5 px-1 text-xs"
+                >
+                  Remove
+                </Button>
               </div>
               
               {/* Show combined slots and events */}
