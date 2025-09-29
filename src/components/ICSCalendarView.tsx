@@ -30,7 +30,7 @@ interface ICSCalendarViewProps {
 
 export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsChange, onClearEvents, onTogglePanel, showToggle }: ICSCalendarViewProps) {
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
-  const [slotDuration, setSlotDuration] = useState<30 | 60 | 'both' | 'custom'>(30);
+  const [slotDuration, setSlotDuration] = useState<30 | 60 | 'both' | 'custom'>('both');
   const [customDuration, setCustomDuration] = useState<number>(15);
   const [availability, setAvailability] = useState<AvailableSlot[]>([]);
   // Helper: detect all-day events (00:00 to 00:00 next day or longer)

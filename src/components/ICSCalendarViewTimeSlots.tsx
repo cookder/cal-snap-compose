@@ -74,34 +74,23 @@ export function TimeSlotDisplay({
                           {(() => {
                             const slots30 = daySlots.slots.filter(s => s.id?.startsWith('30-'));
                             return slots30.length > 0 ? (
-                         <div className="grid grid-cols-4 gap-1 items-start">
-                                 {slots30.map((slot, index) => {
-                                   const duration = 30; // 30 minutes
-                                   // Proportional heights: 15min=h-8, 30min=h-16, 60min=h-32, 90min=h-48, 120min=h-64
-                                   const heightClass = duration <= 15 ? 'h-8' : 
-                                                     duration <= 30 ? 'h-16' : 
-                                                     duration <= 60 ? 'h-32' : 
-                                                     duration <= 90 ? 'h-48' : 'h-64';
-                                   return (
-                                      <button
-                                        key={`30-${index}`}
-                                        onClick={() => toggleSlotSelection(slot.id!)}
-                                        className={`p-1 rounded-md border transition-all text-xs flex flex-col justify-between ${heightClass} ${
-                                          slot.selected
-                                            ? 'bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500 ring-opacity-50'
-                                            : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 hover:bg-blue-75 dark:hover:bg-blue-900/40'
-                                        }`}
-                                      >
-                                        <div className="font-medium text-blue-800 dark:text-blue-300 text-[10px] leading-tight text-center">
-                                          {slot.start}
-                                        </div>
-                                        <div className="font-medium text-blue-800 dark:text-blue-300 text-[10px] leading-tight text-center">
-                                          {slot.end}
-                                        </div>
-                                        <div className="text-[10px] opacity-75">30m</div>
-                                      </button>
-                                   );
-                                 })}
+                              <div className="grid grid-cols-2 gap-1">
+                                {slots30.map((slot, index) => (
+                                  <button
+                                    key={`30-${index}`}
+                                    onClick={() => toggleSlotSelection(slot.id!)}
+                                    className={`flex items-center justify-between p-2 rounded-md border transition-all ${
+                                      slot.selected
+                                        ? 'bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500 ring-opacity-50'
+                                        : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 hover:bg-blue-75 dark:hover:bg-blue-900/40'
+                                    }`}
+                                  >
+                                    <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                                      {slot.start} - {slot.end}
+                                    </span>
+                                    <Clock className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                                  </button>
+                                ))}
                               </div>
                             ) : (
                               <p className="text-xs text-muted-foreground">No 30-min slots available</p>
@@ -117,34 +106,23 @@ export function TimeSlotDisplay({
                           {(() => {
                             const slots60 = daySlots.slots.filter(s => s.id?.startsWith('60-'));
                             return slots60.length > 0 ? (
-                         <div className="grid grid-cols-4 gap-1 items-start">
-                                 {slots60.map((slot, index) => {
-                                   const duration = 60; // 60 minutes  
-                                   // Proportional heights: 15min=h-8, 30min=h-16, 60min=h-32, 90min=h-48, 120min=h-64
-                                   const heightClass = duration <= 15 ? 'h-8' : 
-                                                     duration <= 30 ? 'h-16' : 
-                                                     duration <= 60 ? 'h-32' : 
-                                                     duration <= 90 ? 'h-48' : 'h-64';
-                                   return (
-                                      <button
-                                        key={`60-${index}`}
-                                        onClick={() => toggleSlotSelection(slot.id!)}
-                                        className={`p-1 rounded-md border transition-all text-xs flex flex-col justify-between ${heightClass} ${
-                                          slot.selected
-                                            ? 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 ring-2 ring-green-500 ring-opacity-50'
-                                            : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-75 dark:hover:bg-green-900/40'
-                                        }`}
-                                      >
-                                        <div className="font-medium text-green-800 dark:text-green-300 text-[10px] leading-tight text-center">
-                                          {slot.start}
-                                        </div>
-                                        <div className="font-medium text-green-800 dark:text-green-300 text-[10px] leading-tight text-center">
-                                          {slot.end}
-                                        </div>
-                                        <div className="text-[10px] opacity-75">60m</div>
-                                      </button>
-                                   );
-                                 })}
+                              <div className="grid grid-cols-2 gap-1">
+                                {slots60.map((slot, index) => (
+                                  <button
+                                    key={`60-${index}`}
+                                    onClick={() => toggleSlotSelection(slot.id!)}
+                                    className={`flex items-center justify-between p-2 rounded-md border transition-all ${
+                                      slot.selected
+                                        ? 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 ring-2 ring-green-500 ring-opacity-50'
+                                        : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-75 dark:hover:bg-green-900/40'
+                                    }`}
+                                  >
+                                    <span className="text-sm font-medium text-green-800 dark:text-green-300">
+                                      {slot.start} - {slot.end}
+                                    </span>
+                                    <Clock className="h-3 w-3 text-green-600 dark:text-green-400" />
+                                  </button>
+                                ))}
                               </div>
                             ) : (
                               <p className="text-xs text-muted-foreground">No 60-min slots available</p>
@@ -158,37 +136,26 @@ export function TimeSlotDisplay({
                             <p className="text-xs font-medium mb-2 text-red-700 dark:text-red-400">
                               Existing events ({dayEvents.filter(e => !isAllDayEvent(e)).length}):
                             </p>
-                             <div className="grid grid-cols-4 gap-1 items-start">
-                               {dayEvents
-                                 .filter(event => !isAllDayEvent(event))
-                                 .sort((a, b) => a.start.getTime() - b.start.getTime())
-                                 .map((event, index) => {
-                                   const durationMs = event.end.getTime() - event.start.getTime();
-                                   const durationMinutes = Math.round(durationMs / (1000 * 60));
-                                   // Proportional heights: 15min=h-8, 30min=h-16, 60min=h-32, 90min=h-48, 120min=h-64
-                                   const heightClass = durationMinutes <= 15 ? 'h-8' : 
-                                                     durationMinutes <= 30 ? 'h-16' : 
-                                                     durationMinutes <= 60 ? 'h-32' : 
-                                                     durationMinutes <= 90 ? 'h-48' : 'h-64';
-                                   
-                                   return (
-                                      <div
-                                        key={index}
-                                        className={`p-1 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800 text-xs flex flex-col ${heightClass}`}
-                                      >
-                                        <div className="font-medium text-red-800 dark:text-red-300 text-[10px] leading-tight text-center">
-                                          {format(event.start, 'h:mm a')}
-                                        </div>
-                                        <div className="font-medium text-red-800 dark:text-red-300 text-[10px] leading-tight text-center">
-                                          {format(event.end, 'h:mm a')}
-                                        </div>
-                                        <div className="text-red-600 dark:text-red-400 flex-1 py-1 overflow-hidden leading-tight break-words text-[10px]">
-                                          {event.summary}
-                                        </div>
-                                        <div className="text-[10px] opacity-75 mt-auto">{durationMinutes}m</div>
-                                      </div>
-                                   );
-                                 })}
+                            <div className="space-y-1">
+                              {dayEvents
+                                .filter(event => !isAllDayEvent(event))
+                                .sort((a, b) => a.start.getTime() - b.start.getTime())
+                                .map((event, index) => (
+                                  <div
+                                    key={index}
+                                    className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800"
+                                  >
+                                    <div className="flex-1">
+                                      <span className="text-sm font-medium text-red-800 dark:text-red-300">
+                                        {format(event.start, 'h:mm a')} - {format(event.end, 'h:mm a')}
+                                      </span>
+                                      <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                                        {event.summary}
+                                      </p>
+                                    </div>
+                                    <CalendarIcon className="h-3 w-3 text-red-600 dark:text-red-400" />
+                                  </div>
+                                ))}
                             </div>
                           </div>
                         )}

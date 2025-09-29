@@ -25,7 +25,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
   const [availability, setAvailability] = useState<AvailableSlot[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [slotDuration, setSlotDuration] = useState<30 | 60 | 'both' | 'custom'>(30);
+  const [slotDuration, setSlotDuration] = useState<30 | 60 | 'both' | 'custom'>('both');
   const [customDuration, setCustomDuration] = useState<number>(15);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [calendarService, setCalendarService] = useState<GoogleCalendarOAuthService | null>(null);
@@ -196,7 +196,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
             day30Slots.slots.forEach(slot => {
               combinedSlots.push({
                 ...slot,
-                selected: false,
+                selected: true,
                 id: `30-${dateKey}-${slot.start}`
               });
             });
@@ -206,7 +206,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
             day60Slots.slots.forEach(slot => {
               combinedSlots.push({
                 ...slot,
-                selected: false,
+                selected: true,
                 id: `60-${dateKey}-${slot.start}`
               });
             });
@@ -227,7 +227,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
           ...daySlot,
           slots: daySlot.slots.map(slot => ({
             ...slot,
-            selected: false,
+            selected: true,
             id: `custom-${format(daySlot.date, 'yyyy-MM-dd')}-${slot.start}`
           }))
         }));
@@ -237,7 +237,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
           ...daySlot,
           slots: daySlot.slots.map(slot => ({
             ...slot,
-            selected: false,
+            selected: true,
             id: `${slotDuration}-${format(daySlot.date, 'yyyy-MM-dd')}-${slot.start}`
           }))
         }));
