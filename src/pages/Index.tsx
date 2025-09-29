@@ -249,24 +249,29 @@ const Index = () => {
             )}
           </div>
 
-          {/* Availability Text Generator */}
-          <div className="lg:col-span-1">
-            <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
-              <GoogleAvailabilityGenerator 
-                selectedSlots={selectedSlots}
-                onTextGenerated={setAvailabilityText}
-              />
-            </Suspense>
-          </div>
+          {/* Sticky Container for Text Generator and Email Composer */}
+          <div className="lg:col-span-2 lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 h-full">
+              {/* Availability Text Generator */}
+              <div className="h-full">
+                <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
+                  <GoogleAvailabilityGenerator 
+                    selectedSlots={selectedSlots}
+                    onTextGenerated={setAvailabilityText}
+                  />
+                </Suspense>
+              </div>
 
-          {/* Email Composer */}
-          <div className="lg:col-span-1">
-            <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
-              <EmailComposer 
-                availabilityText={availabilityText}
-                onInsertAvailability={() => {}}
-              />
-            </Suspense>
+              {/* Email Composer */}
+              <div className="h-full">
+                <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
+                  <EmailComposer 
+                    availabilityText={availabilityText}
+                    onInsertAvailability={() => {}}
+                  />
+                </Suspense>
+              </div>
+            </div>
           </div>
         </div>
         
