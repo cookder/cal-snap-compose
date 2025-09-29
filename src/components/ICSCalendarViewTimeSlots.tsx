@@ -54,19 +54,22 @@ export function TimeSlotDisplay({
                   {formatDateDisplay(daySlots.date)} ({format(daySlots.date, "EEE, MMM d")})
                 </h4>
                 <div className="flex items-center gap-1">
-                  <div className="flex items-center gap-1">
-                    <Checkbox
-                      checked={daySlots.slots.length > 0 && daySlots.slots.every(slot => slot.selected)}
-                      onCheckedChange={(checked) => toggleAllSlots(daySlots.date, !!checked)}
-                      className="h-3 w-3"
-                    />
-                    <span className="text-xs text-muted-foreground">All</span>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const allSelected = daySlots.slots.length > 0 && daySlots.slots.every(slot => slot.selected);
+                      toggleAllSlots(daySlots.date, !allSelected);
+                    }}
+                    className="h-6 px-2 text-xs"
+                  >
+                    {daySlots.slots.length > 0 && daySlots.slots.every(slot => slot.selected) ? "Deselect All" : "Select All"}
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => removeDate(daySlots.date)}
-                    className="h-5 px-1 text-xs"
+                    className="h-6 px-2 text-xs"
                   >
                     Remove
                   </Button>
