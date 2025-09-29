@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { toast } from 'sonner';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
-import { AvailableSlot } from "@/services/googleCalendarOAuth";
+import { AvailableSlot, TimeSlot } from "@/services/googleCalendarOAuth";
 import { OAuthCredentials } from "@/services/googleOAuth";
 
 // Lazy load components for better performance
@@ -25,6 +25,7 @@ const Index = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [availability, setAvailability] = useState<AvailableSlot[]>([]);
+  const [selectedSlots, setSelectedSlots] = useState<{ date: Date; slots: TimeSlot[] }[]>([]);
   const [availabilityText, setAvailabilityText] = useState("");
   const [credentials, setCredentials] = useState<OAuthCredentials | null>(null);
   const [credentialsError, setCredentialsError] = useState<string | null>(null);
@@ -122,6 +123,10 @@ const Index = () => {
     navigate('/auth', { replace: true });
   };
 
+  const handleSelectedSlotsChange = (slots: { date: Date; slots: TimeSlot[] }[]) => {
+    setSelectedSlots(slots);
+  };
+
   const handleEventsImported = (events: any[]) => {
     setImportedEvents(events);
     toast({
@@ -133,6 +138,7 @@ const Index = () => {
   const handleClearImportedEvents = () => {
     setImportedEvents([]);
     setAvailability([]); // Clear availability when clearing events
+    setSelectedSlots([]); // Clear selected slots when clearing events
     toast({
       title: "Imported events cleared",
     });
@@ -211,6 +217,7 @@ const Index = () => {
               <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
                 <GoogleCalendarView 
                   onAvailabilityChange={setAvailability} 
+                  onSelectedSlotsChange={handleSelectedSlotsChange}
                   credentials={credentials}
                 />
               </Suspense>
@@ -235,6 +242,7 @@ const Index = () => {
                 <ICSCalendarView 
                   events={importedEvents}
                   onAvailabilityChange={setAvailability}
+                  onSelectedSlotsChange={handleSelectedSlotsChange}
                   onClearEvents={handleClearImportedEvents}
                 />
               </Suspense>

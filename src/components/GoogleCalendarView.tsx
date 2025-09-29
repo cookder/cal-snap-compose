@@ -8,15 +8,16 @@ import { Badge } from '@/components/ui/badge';
 import { AlertCircle, Calendar as CalendarIcon, Clock, CheckCircle, LogOut, LogIn, RefreshCw } from 'lucide-react';
 import { format, isSameDay, isToday, isTomorrow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import GoogleCalendarOAuthService, { AvailableSlot, CalendarEvent } from '@/services/googleCalendarOAuth';
+import GoogleCalendarOAuthService, { AvailableSlot, CalendarEvent, TimeSlot } from '@/services/googleCalendarOAuth';
 import GoogleOAuthService, { OAuthCredentials } from '@/services/googleOAuth';
 
 interface GoogleCalendarViewProps {
   onAvailabilityChange: (availability: AvailableSlot[]) => void;
+  onSelectedSlotsChange: (selectedSlots: { date: Date; slots: TimeSlot[] }[]) => void;
   credentials: OAuthCredentials | null;
 }
 
-const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityChange, credentials }) => {
+const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityChange, onSelectedSlotsChange, credentials }) => {
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [events, setEvents] = useState<{ [key: string]: CalendarEvent[] }>({});
   const [availability, setAvailability] = useState<AvailableSlot[]>([]);
@@ -75,6 +76,28 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
     }
   };
 
+
+  // Toggle slot selection
+  const toggleSlotSelection = (slotId: string) => {
+    setAvailability(prev => {
+      const updated = prev.map(daySlot => ({
+        ...daySlot,
+        slots: daySlot.slots.map(slot => 
+          slot.id === slotId ? { ...slot, selected: !slot.selected } : slot
+        )
+      }));
+      
+      // Update selected slots callback
+      const selectedSlots = updated.map(daySlot => ({
+        date: daySlot.date,
+        slots: daySlot.slots.filter(slot => slot.selected)
+      })).filter(daySlot => daySlot.slots.length > 0);
+      
+      onSelectedSlotsChange(selectedSlots);
+      
+      return updated;
+    });
+  };
 
   const handleGoogleLogin = () => {
     if (oauthService) {
@@ -167,6 +190,14 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
       
       setAvailability(availableSlots);
       onAvailabilityChange(availableSlots);
+
+      // Update selected slots callback
+      const selectedSlots = availableSlots.map(daySlot => ({
+        date: daySlot.date,
+        slots: daySlot.slots.filter(slot => slot.selected)
+      })).filter(daySlot => daySlot.slots.length > 0);
+      
+      onSelectedSlotsChange(selectedSlots);
 
       toast({
         title: "Calendar Updated",
@@ -457,6 +488,8 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                           end: string;
                           startTime: Date;
                           title?: string;
+                          selected?: boolean;
+                          id?: string;
                         }> = [];
 
                         // Add available slots
@@ -465,7 +498,9 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                             type: 'available',
                             start: slot.start,
                             end: slot.end,
-                            startTime: slot.startTime
+                            startTime: slot.startTime,
+                            selected: slot.selected,
+                            id: slot.id
                           });
                         });
 
@@ -494,40 +529,43 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                         return (
                           <>
                             <p className="text-xs font-medium mb-2">
-                              Time slots ({daySlots.slots.length} available, {dayEvents.length} busy):
+                              Time slots ({daySlots.slots.length} available, {daySlots.slots.filter(s => s.selected).length} selected, {dayEvents.length} busy):
                             </p>
                             <div className="space-y-1">
                               {allItems.map((item, index) => (
-                                <div
-                                  key={index}
-                                  className={`flex items-center justify-between p-2 rounded-md border ${
-                                    item.type === 'available'
-                                      ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
-                                      : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'
-                                  }`}
-                                >
-                                  <div className="flex-1">
-                                    <span className={`text-sm font-medium ${
-                                      item.type === 'available'
-                                        ? 'text-green-800 dark:text-green-300'
-                                        : 'text-red-800 dark:text-red-300'
-                                    }`}>
+                                item.type === 'available' ? (
+                                  <button
+                                    key={index}
+                                    onClick={() => toggleSlotSelection(item.id!)}
+                                    className={`w-full flex items-center justify-between p-2 rounded-md border transition-all ${
+                                      item.selected
+                                        ? 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 ring-2 ring-green-500 ring-opacity-50'
+                                        : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-75 dark:hover:bg-green-900/40'
+                                    }`}
+                                  >
+                                    <span className="text-sm font-medium text-green-800 dark:text-green-300">
                                       {item.start} - {item.end}
                                     </span>
-                                    {item.title && (
-                                      <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
-                                        {item.title}
-                                      </p>
-                                    )}
+                                    <Clock className="h-3 w-3 text-green-600 dark:text-green-400" />
+                                  </button>
+                                ) : (
+                                  <div
+                                    key={index}
+                                    className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800"
+                                  >
+                                    <div className="flex-1">
+                                      <span className="text-sm font-medium text-red-800 dark:text-red-300">
+                                        {item.start} - {item.end}
+                                      </span>
+                                      {item.title && (
+                                        <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                                          {item.title}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <CalendarIcon className="h-3 w-3 text-red-600 dark:text-red-400" />
                                   </div>
-                                  <div className="flex items-center gap-1">
-                                    {item.type === 'available' ? (
-                                      <Clock className="h-3 w-3 text-green-600 dark:text-green-400" />
-                                    ) : (
-                                      <CalendarIcon className="h-3 w-3 text-red-600 dark:text-red-400" />
-                                    )}
-                                  </div>
-                                </div>
+                                )
                               ))}
                             </div>
                           </>

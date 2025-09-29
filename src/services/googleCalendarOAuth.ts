@@ -21,6 +21,8 @@ export interface TimeSlot {
   end: string;
   startTime: Date;
   endTime: Date;
+  selected?: boolean;
+  id?: string;
 }
 
 export interface AvailableSlot {

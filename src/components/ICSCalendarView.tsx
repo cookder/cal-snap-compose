@@ -21,10 +21,11 @@ interface CalendarEvent {
 interface ICSCalendarViewProps {
   events: CalendarEvent[];
   onAvailabilityChange: (availability: AvailableSlot[]) => void;
+  onSelectedSlotsChange: (selectedSlots: { date: Date; slots: TimeSlot[] }[]) => void;
   onClearEvents: () => void;
 }
 
-export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }: ICSCalendarViewProps) {
+export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsChange, onClearEvents }: ICSCalendarViewProps) {
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [slotDuration, setSlotDuration] = useState<30 | 60 | 'both' | 'custom'>(30);
   const [customDuration, setCustomDuration] = useState<number>(15);
@@ -73,11 +74,37 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
       const eventStart = new Date(Math.max(event.start.getTime(), dayStart.getTime()));
       const eventEnd = new Date(Math.min(event.end.getTime(), dayEnd.getTime()));
 
-      // Generate slots before this event if there's a gap
-      while (currentTime < eventStart) {
+        // Generate slots before this event if there's a gap
+        while (currentTime < eventStart) {
+          const slotEnd = new Date(Math.min(
+            addMinutes(currentTime, duration).getTime(),
+            eventStart.getTime()
+          ));
+
+          // Only add slot if it's the full duration
+          if (slotEnd.getTime() - currentTime.getTime() >= duration * 60 * 1000) {
+            timeSlots.push({
+              start: format(currentTime, 'HH:mm'),
+              end: format(slotEnd, 'HH:mm'),
+              startTime: new Date(currentTime),
+              endTime: new Date(slotEnd),
+              selected: false,
+              id: `${format(selectedDate, 'yyyy-MM-dd')}-${format(currentTime, 'HH:mm')}-${duration}`
+            });
+          }
+
+          currentTime = addMinutes(currentTime, duration);
+        }
+
+      // Move current time to after this event
+      currentTime = new Date(Math.max(currentTime.getTime(), eventEnd.getTime()));
+    }
+
+      // Generate remaining slots after all events
+      while (currentTime < dayEnd) {
         const slotEnd = new Date(Math.min(
           addMinutes(currentTime, duration).getTime(),
-          eventStart.getTime()
+          dayEnd.getTime()
         ));
 
         // Only add slot if it's the full duration
@@ -86,36 +113,14 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
             start: format(currentTime, 'HH:mm'),
             end: format(slotEnd, 'HH:mm'),
             startTime: new Date(currentTime),
-            endTime: new Date(slotEnd)
+            endTime: new Date(slotEnd),
+            selected: false,
+            id: `${format(selectedDate, 'yyyy-MM-dd')}-${format(currentTime, 'HH:mm')}-${duration}`
           });
         }
 
         currentTime = addMinutes(currentTime, duration);
       }
-
-      // Move current time to after this event
-      currentTime = new Date(Math.max(currentTime.getTime(), eventEnd.getTime()));
-    }
-
-    // Generate remaining slots after all events
-    while (currentTime < dayEnd) {
-      const slotEnd = new Date(Math.min(
-        addMinutes(currentTime, duration).getTime(),
-        dayEnd.getTime()
-      ));
-
-      // Only add slot if it's the full duration
-      if (slotEnd.getTime() - currentTime.getTime() >= duration * 60 * 1000) {
-        timeSlots.push({
-          start: format(currentTime, 'HH:mm'),
-          end: format(slotEnd, 'HH:mm'),
-          startTime: new Date(currentTime),
-          endTime: new Date(slotEnd)
-        });
-      }
-
-      currentTime = addMinutes(currentTime, duration);
-    }
 
     return timeSlots;
   };
@@ -169,6 +174,36 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
 
     setAvailability(availableSlots);
     onAvailabilityChange(availableSlots);
+    
+    // Update selected slots callback
+    const selectedSlots = availableSlots.map(daySlot => ({
+      date: daySlot.date,
+      slots: daySlot.slots.filter(slot => slot.selected)
+    })).filter(daySlot => daySlot.slots.length > 0);
+    
+    onSelectedSlotsChange(selectedSlots);
+  };
+
+  // Toggle slot selection
+  const toggleSlotSelection = (slotId: string) => {
+    setAvailability(prev => {
+      const updated = prev.map(daySlot => ({
+        ...daySlot,
+        slots: daySlot.slots.map(slot => 
+          slot.id === slotId ? { ...slot, selected: !slot.selected } : slot
+        )
+      }));
+      
+      // Update selected slots callback
+      const selectedSlots = updated.map(daySlot => ({
+        date: daySlot.date,
+        slots: daySlot.slots.filter(slot => slot.selected)
+      })).filter(daySlot => daySlot.slots.length > 0);
+      
+      onSelectedSlotsChange(selectedSlots);
+      
+      return updated;
+    });
   };
 
   // Auto-generate availability when dates or slot duration changes
@@ -345,20 +380,25 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
                             {/* 30-minute slots */}
                             <div>
                               <p className="text-xs font-medium mb-2 text-blue-700 dark:text-blue-400">
-                                30-minute slots ({slots30.length} available):
+                                30-minute slots ({slots30.length} available, {slots30.filter(s => s.selected).length} selected):
                               </p>
                               {slots30.length > 0 ? (
                                 <div className="grid grid-cols-2 gap-1">
                                   {slots30.map((slot, index) => (
-                                    <div
+                                    <button
                                       key={`30-${index}`}
-                                      className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-950/30 rounded-md border border-blue-200 dark:border-blue-800"
+                                      onClick={() => toggleSlotSelection(slot.id!)}
+                                      className={`flex items-center justify-between p-2 rounded-md border transition-all ${
+                                        slot.selected
+                                          ? 'bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500 ring-opacity-50'
+                                          : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 hover:bg-blue-75 dark:hover:bg-blue-900/40'
+                                      }`}
                                     >
                                       <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
                                         {slot.start} - {slot.end}
                                       </span>
                                       <Clock className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                                    </div>
+                                    </button>
                                   ))}
                                 </div>
                               ) : (
@@ -369,20 +409,25 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
                             {/* 60-minute slots */}
                             <div>
                               <p className="text-xs font-medium mb-2 text-green-700 dark:text-green-400">
-                                60-minute slots ({slots60.length} available):
+                                60-minute slots ({slots60.length} available, {slots60.filter(s => s.selected).length} selected):
                               </p>
                               {slots60.length > 0 ? (
                                 <div className="grid grid-cols-2 gap-1">
                                   {slots60.map((slot, index) => (
-                                    <div
+                                    <button
                                       key={`60-${index}`}
-                                      className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-950/30 rounded-md border border-green-200 dark:border-green-800"
+                                      onClick={() => toggleSlotSelection(slot.id!)}
+                                      className={`flex items-center justify-between p-2 rounded-md border transition-all ${
+                                        slot.selected
+                                          ? 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 ring-2 ring-green-500 ring-opacity-50'
+                                          : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-75 dark:hover:bg-green-900/40'
+                                      }`}
                                     >
                                       <span className="text-sm font-medium text-green-800 dark:text-green-300">
                                         {slot.start} - {slot.end}
                                       </span>
                                       <Clock className="h-3 w-3 text-green-600 dark:text-green-400" />
-                                    </div>
+                                    </button>
                                   ))}
                                 </div>
                               ) : (
@@ -429,6 +474,8 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
                           end: string;
                           startTime: Date;
                           title?: string;
+                          selected?: boolean;
+                          id?: string;
                         }> = [];
 
                         // Add available slots
@@ -437,7 +484,9 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
                             type: 'available',
                             start: slot.start,
                             end: slot.end,
-                            startTime: slot.startTime
+                            startTime: slot.startTime,
+                            selected: slot.selected,
+                            id: slot.id
                           });
                         });
 
@@ -468,40 +517,43 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
                         return (
                           <>
                             <p className="text-xs font-medium mb-2">
-                              Time slots ({daySlots.slots.length} available, {dayEvents.filter(e => !isAllDayEvent(e)).length} busy):
+                              Time slots ({daySlots.slots.length} available, {daySlots.slots.filter(s => s.selected).length} selected, {dayEvents.filter(e => !isAllDayEvent(e)).length} busy):
                             </p>
                             <div className="space-y-1">
                               {allItems.map((item, index) => (
-                                <div
-                                  key={index}
-                                  className={`flex items-center justify-between p-2 rounded-md border ${
-                                    item.type === 'available'
-                                      ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
-                                      : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'
-                                  }`}
-                                >
-                                  <div className="flex-1">
-                                    <span className={`text-sm font-medium ${
-                                      item.type === 'available'
-                                        ? 'text-green-800 dark:text-green-300'
-                                        : 'text-red-800 dark:text-red-300'
-                                    }`}>
+                                item.type === 'available' ? (
+                                  <button
+                                    key={index}
+                                    onClick={() => toggleSlotSelection(item.id!)}
+                                    className={`w-full flex items-center justify-between p-2 rounded-md border transition-all ${
+                                      item.selected
+                                        ? 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 ring-2 ring-green-500 ring-opacity-50'
+                                        : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-75 dark:hover:bg-green-900/40'
+                                    }`}
+                                  >
+                                    <span className="text-sm font-medium text-green-800 dark:text-green-300">
                                       {item.start} - {item.end}
                                     </span>
-                                    {item.title && (
-                                      <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
-                                        {item.title}
-                                      </p>
-                                    )}
+                                    <Clock className="h-3 w-3 text-green-600 dark:text-green-400" />
+                                  </button>
+                                ) : (
+                                  <div
+                                    key={index}
+                                    className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800"
+                                  >
+                                    <div className="flex-1">
+                                      <span className="text-sm font-medium text-red-800 dark:text-red-300">
+                                        {item.start} - {item.end}
+                                      </span>
+                                      {item.title && (
+                                        <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                                          {item.title}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <CalendarIcon className="h-3 w-3 text-red-600 dark:text-red-400" />
                                   </div>
-                                  <div className="flex items-center gap-1">
-                                    {item.type === 'available' ? (
-                                      <Clock className="h-3 w-3 text-green-600 dark:text-green-400" />
-                                    ) : (
-                                      <CalendarIcon className="h-3 w-3 text-red-600 dark:text-red-400" />
-                                    )}
-                                  </div>
-                                </div>
+                                )
                               ))}
                             </div>
                           </>
