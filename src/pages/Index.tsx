@@ -217,11 +217,11 @@ const Index = () => {
         <div className={`grid gap-2 ${
           showGoogleCalendar && showICSCalendar 
             ? 'grid-cols-1 lg:grid-cols-5' 
-            : 'grid-cols-1 lg:grid-cols-4'
+            : 'grid-cols-1 lg:grid-cols-6'
         }`}>
           {/* Google Calendar View */}
           {showGoogleCalendar && (
-            <div className={showICSCalendar ? "lg:col-span-1" : "lg:col-span-2"}>
+            <div className={showICSCalendar ? "lg:col-span-1" : "lg:col-span-4"}>
               {credentials ? (
                 <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
                   <GoogleCalendarView 
@@ -245,7 +245,7 @@ const Index = () => {
 
           {/* ICS Import and Calendar View */}
           {showICSCalendar && (
-            <div className={showGoogleCalendar ? "lg:col-span-1" : "lg:col-span-2"}>
+            <div className={showGoogleCalendar ? "lg:col-span-1" : "lg:col-span-4"}>
               {importedEvents.length === 0 ? (
                 <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
                   <ICSImporter onEventsImported={handleEventsImported} />
