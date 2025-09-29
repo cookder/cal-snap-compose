@@ -213,11 +213,7 @@ const Index = () => {
           </div>
         )}
         
-        <div className={`grid gap-2 ${
-          (showGoogleCalendar && showICSCalendar) || (!showGoogleCalendar && !showICSCalendar)
-            ? 'grid-cols-1 lg:grid-cols-5' 
-            : 'grid-cols-1 lg:grid-cols-4'
-        }`}>
+        <div className="grid gap-2 grid-cols-1 lg:grid-cols-5">
           {/* Google Calendar View */}
           {showGoogleCalendar && (
             <div className="lg:col-span-1">
@@ -291,7 +287,11 @@ const Index = () => {
 
           {/* Sticky Container for Text Generator and Email Composer */}
           <div className={`lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:overflow-hidden ${
-            showGoogleCalendar || showICSCalendar ? 'lg:col-span-3' : 'hidden'
+            (showGoogleCalendar || showICSCalendar) 
+              ? showGoogleCalendar && showICSCalendar 
+                ? 'lg:col-span-3' 
+                : 'lg:col-span-3'
+              : 'hidden'
           }`}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 h-full">
               {/* Availability Text Generator */}
