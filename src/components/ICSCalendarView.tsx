@@ -91,7 +91,7 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
                end: format(slotEnd, 'h:mm a'),
               startTime: new Date(currentTime),
               endTime: new Date(slotEnd),
-              selected: true,
+              selected: false,
                id: `${format(selectedDate, 'yyyy-MM-dd')}-${format(currentTime, 'h:mm a')}-${duration}`
             });
           }
@@ -117,7 +117,7 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
              end: format(slotEnd, 'h:mm a'),
             startTime: new Date(currentTime),
             endTime: new Date(slotEnd),
-            selected: true,
+            selected: false,
             id: `${format(selectedDate, 'yyyy-MM-dd')}-${format(currentTime, 'h:mm a')}-${duration}`
           });
         }
@@ -190,30 +190,6 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
     })).filter(daySlot => daySlot.slots.length > 0);
     
     onSelectedSlotsChange(selectedSlots);
-  };
-
-  // Toggle all slots for a date
-  const toggleAllSlots = (date: Date, selectAll: boolean) => {
-    setAvailability(prev => {
-      const updated = prev.map(daySlot => 
-        isSameDay(daySlot.date, date) 
-          ? {
-              ...daySlot,
-              slots: daySlot.slots.map(slot => ({ ...slot, selected: selectAll }))
-            }
-          : daySlot
-      );
-      
-      // Update selected slots callback
-      const selectedSlots = updated.map(daySlot => ({
-        date: daySlot.date,
-        slots: daySlot.slots.filter(slot => slot.selected)
-      })).filter(daySlot => daySlot.slots.length > 0);
-      
-      onSelectedSlotsChange(selectedSlots);
-      
-      return updated;
-    });
   };
 
   // Toggle slot selection
@@ -393,7 +369,6 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
             isAllDayEvent={isAllDayEvent}
             generateSlotsForDuration={generateSlotsForDuration}
             toggleSlotSelection={toggleSlotSelection}
-            toggleAllSlots={toggleAllSlots}
             removeDate={removeDate}
             formatDateDisplay={formatDateDisplay}
           />
