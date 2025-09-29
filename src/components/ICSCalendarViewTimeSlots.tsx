@@ -40,7 +40,7 @@ export function TimeSlotDisplay({
     <div className="space-y-2">
       <h3 className="text-sm font-semibold">Available Time Slots</h3>
       
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {availability.map((daySlots) => {
           const dayEvents = getEventsForDate(daySlots.date);
           return (
