@@ -563,7 +563,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                                       >
                                         <div className="flex-1">
                                           <span className="text-sm font-medium text-red-800 dark:text-red-300">
-                                            {format(new Date(event.start.dateTime!), 'h:mm a')} - {format(new Date(event.end.dateTime!), 'h:mm a')}
+                                            {format(new Date(event.start.dateTime!), 'HH:mm')} - {format(new Date(event.end.dateTime!), 'HH:mm')}
                                           </span>
                                           <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
                                             {event.summary}
@@ -605,8 +605,8 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                         dayEvents.forEach(event => {
                           allItems.push({
                             type: 'busy',
-                             start: format(new Date(event.start.dateTime!), 'h:mm a'),
-                             end: format(new Date(event.end.dateTime!), 'h:mm a'),
+                            start: format(new Date(event.start.dateTime!), 'HH:mm'),
+                            end: format(new Date(event.end.dateTime!), 'HH:mm'),
                             startTime: new Date(event.start.dateTime!),
                             title: event.summary
                           });

@@ -171,7 +171,7 @@ export function TimeSlotDisplay({
                                        className={`p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800 text-xs flex flex-col ${heightClass}`}
                                      >
                                        <div className="font-medium text-red-800 dark:text-red-300 leading-tight">
-                                         {format(event.start, 'h:mm a')} - {format(event.end, 'h:mm a')}
+                                         {format(event.start, 'HH:mm')} - {format(event.end, 'HH:mm')}
                                        </div>
                                        <div className="text-red-600 dark:text-red-400 flex-1 py-1 overflow-hidden leading-tight break-words">
                                          {event.summary}
@@ -215,8 +215,8 @@ export function TimeSlotDisplay({
                       .forEach(event => {
                         allItems.push({
                           type: 'busy',
-                           start: format(event.start, 'h:mm a'),
-                           end: format(event.end, 'h:mm a'),
+                          start: format(event.start, 'HH:mm'),
+                          end: format(event.end, 'HH:mm'),
                           startTime: event.start,
                           title: event.summary
                         });
@@ -261,22 +261,19 @@ export function TimeSlotDisplay({
                                  }
                                }
                                
-                                return timeRanges.map((timeRange, index) => {
-                                  let durationMinutes = 30; // default for height calculation
-                                  if (groupedItems[index] && groupedItems[index].length > 0) {
-                                    const firstItem = groupedItems[index][0];
-                                    if (firstItem.type === 'available') {
-                                      // Parse AM/PM format properly
-                                      const startDate = new Date(`1970-01-01 ${firstItem.start}`);
-                                      const endDate = new Date(`1970-01-01 ${firstItem.end}`);
-                                      durationMinutes = (endDate.getTime() - startDate.getTime()) / (1000 * 60);
-                                    } else {
-                                      // For busy events, calculate from actual Date objects
-                                      const endTime = new Date(`1970-01-01 ${firstItem.end}`);
-                                      const startTime = new Date(`1970-01-01 ${firstItem.start}`);
-                                      durationMinutes = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
-                                    }
-                                  }
+                               return timeRanges.map((timeRange, index) => {
+                                 let durationMinutes = 30; // default for height calculation
+                                 if (groupedItems[index] && groupedItems[index].length > 0) {
+                                   const firstItem = groupedItems[index][0];
+                                   if (firstItem.type === 'available') {
+                                     const [startHour, startMin] = firstItem.start.split(':').map(Number);
+                                     const [endHour, endMin] = firstItem.end.split(':').map(Number);
+                                     durationMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+                                   } else {
+                                     durationMinutes = parseInt(firstItem.end.split(':')[0]) * 60 + parseInt(firstItem.end.split(':')[1]) - 
+                                       (parseInt(firstItem.start.split(':')[0]) * 60 + parseInt(firstItem.start.split(':')[1]));
+                                   }
+                                 }
                                  
                                  const heightClass = durationMinutes <= 15 ? 'h-8' : 
                                                    durationMinutes <= 30 ? 'h-16' : 
@@ -296,19 +293,20 @@ export function TimeSlotDisplay({
                            
                            {/* Main grid content */}
                            <div className="grid grid-cols-4 gap-1 items-start flex-1">
-                            {allItems.map((item, index) => {
-                              let durationMinutes = 30; // default
-                              if (item.type === 'available') {
-                                // Parse AM/PM format properly for available slots
-                                const startDate = new Date(`1970-01-01 ${item.start}`);
-                                const endDate = new Date(`1970-01-01 ${item.end}`);
-                                durationMinutes = (endDate.getTime() - startDate.getTime()) / (1000 * 60);
-                              } else {
-                                // For busy events, calculate from actual Date objects
-                                const endTime = new Date(`1970-01-01 ${item.end}`);
-                                const startTime = new Date(`1970-01-01 ${item.start}`);
-                                durationMinutes = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
-                              }
+                           {allItems.map((item, index) => {
+                             let durationMinutes = 30; // default
+                             if (item.type === 'available') {
+                               // Calculate duration from time strings
+                               const [startHour, startMin] = item.start.split(':').map(Number);
+                               const [endHour, endMin] = item.end.split(':').map(Number);
+                               durationMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+                             } else {
+                               // Calculate duration from Date objects for busy events
+                               const durationMs = item.startTime.getTime() - item.startTime.getTime();
+                               durationMinutes = Math.round(durationMs / (1000 * 60)) || 
+                                 parseInt(item.end.split(':')[0]) * 60 + parseInt(item.end.split(':')[1]) - 
+                                 (parseInt(item.start.split(':')[0]) * 60 + parseInt(item.start.split(':')[1]));
+                             }
                              
                              // Proportional heights: 15min=h-8, 30min=h-16, 60min=h-32, 90min=h-48, 120min=h-64
                              const heightClass = durationMinutes <= 15 ? 'h-8' : 
