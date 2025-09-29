@@ -52,8 +52,8 @@ export function ICSImporter({ onEventsImported }: ICSImporterProps) {
     }
   };
 
-  const handleImport = () => {
-    if (!icsContent.trim()) {
+  const importICSContent = (content: string) => {
+    if (!content.trim()) {
       setError('Please paste ICS file content');
       return;
     }
@@ -62,7 +62,7 @@ export function ICSImporter({ onEventsImported }: ICSImporterProps) {
     setError(null);
 
     try {
-      const events = parseICSContent(icsContent);
+      const events = parseICSContent(content);
       
       if (events.length === 0) {
         setError('No events found in the ICS content');
@@ -83,6 +83,10 @@ export function ICSImporter({ onEventsImported }: ICSImporterProps) {
     }
   };
 
+  const handleImport = () => {
+    importICSContent(icsContent);
+  };
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -97,6 +101,8 @@ export function ICSImporter({ onEventsImported }: ICSImporterProps) {
       const content = e.target?.result as string;
       setIcsContent(content);
       setError(null);
+      // Automatically import after successful file read
+      importICSContent(content);
     };
     reader.onerror = () => {
       setError('Failed to read the file');
