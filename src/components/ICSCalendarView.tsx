@@ -333,89 +333,180 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
                   <div className="space-y-1">
                     {(() => {
                       const dayEvents = getEventsForDate(daySlots.date);
-                      const allItems: Array<{
-                        type: 'available' | 'busy';
-                        start: string;
-                        end: string;
-                        startTime: Date;
-                        title?: string;
-                      }> = [];
+                      
+                      if (slotDuration === 'both') {
+                        // Generate separate lists for 30 and 60 minute slots
+                        const blockingEvents = dayEvents.filter(e => !isAllDayEvent(e));
+                        const slots30 = generateSlotsForDuration(daySlots.date, blockingEvents, 30);
+                        const slots60 = generateSlotsForDuration(daySlots.date, blockingEvents, 60);
 
-                      // Add available slots
-                      daySlots.slots.forEach(slot => {
-                        allItems.push({
-                          type: 'available',
-                          start: slot.start,
-                          end: slot.end,
-                          startTime: slot.startTime
-                        });
-                      });
+                        return (
+                          <div className="space-y-3">
+                            {/* 30-minute slots */}
+                            <div>
+                              <p className="text-xs font-medium mb-2 text-blue-700 dark:text-blue-400">
+                                30-minute slots ({slots30.length} available):
+                              </p>
+                              {slots30.length > 0 ? (
+                                <div className="grid grid-cols-2 gap-1">
+                                  {slots30.map((slot, index) => (
+                                    <div
+                                      key={`30-${index}`}
+                                      className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-950/30 rounded-md border border-blue-200 dark:border-blue-800"
+                                    >
+                                      <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                                        {slot.start} - {slot.end}
+                                      </span>
+                                      <Clock className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-muted-foreground">No 30-min slots available</p>
+                              )}
+                            </div>
 
-                      // Add busy events (excluding all-day events)
-                      dayEvents
-                        .filter(event => !isAllDayEvent(event))
-                        .forEach(event => {
+                            {/* 60-minute slots */}
+                            <div>
+                              <p className="text-xs font-medium mb-2 text-green-700 dark:text-green-400">
+                                60-minute slots ({slots60.length} available):
+                              </p>
+                              {slots60.length > 0 ? (
+                                <div className="grid grid-cols-2 gap-1">
+                                  {slots60.map((slot, index) => (
+                                    <div
+                                      key={`60-${index}`}
+                                      className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-950/30 rounded-md border border-green-200 dark:border-green-800"
+                                    >
+                                      <span className="text-sm font-medium text-green-800 dark:text-green-300">
+                                        {slot.start} - {slot.end}
+                                      </span>
+                                      <Clock className="h-3 w-3 text-green-600 dark:text-green-400" />
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-muted-foreground">No 60-min slots available</p>
+                              )}
+                            </div>
+
+                            {/* Existing events */}
+                            {dayEvents.filter(e => !isAllDayEvent(e)).length > 0 && (
+                              <div>
+                                <p className="text-xs font-medium mb-2 text-red-700 dark:text-red-400">
+                                  Existing events ({dayEvents.filter(e => !isAllDayEvent(e)).length}):
+                                </p>
+                                <div className="space-y-1">
+                                  {dayEvents
+                                    .filter(event => !isAllDayEvent(event))
+                                    .sort((a, b) => a.start.getTime() - b.start.getTime())
+                                    .map((event, index) => (
+                                      <div
+                                        key={index}
+                                        className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800"
+                                      >
+                                        <div className="flex-1">
+                                          <span className="text-sm font-medium text-red-800 dark:text-red-300">
+                                            {format(event.start, 'HH:mm')} - {format(event.end, 'HH:mm')}
+                                          </span>
+                                          <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                                            {event.summary}
+                                          </p>
+                                        </div>
+                                        <CalendarIcon className="h-3 w-3 text-red-600 dark:text-red-400" />
+                                      </div>
+                                    ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      } else {
+                        // Single duration mode (existing logic)
+                        const allItems: Array<{
+                          type: 'available' | 'busy';
+                          start: string;
+                          end: string;
+                          startTime: Date;
+                          title?: string;
+                        }> = [];
+
+                        // Add available slots
+                        daySlots.slots.forEach(slot => {
                           allItems.push({
-                            type: 'busy',
-                            start: format(event.start, 'HH:mm'),
-                            end: format(event.end, 'HH:mm'),
-                            startTime: event.start,
-                            title: event.summary
+                            type: 'available',
+                            start: slot.start,
+                            end: slot.end,
+                            startTime: slot.startTime
                           });
                         });
 
-                      // Sort by start time
-                      allItems.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+                        // Add busy events (excluding all-day events)
+                        dayEvents
+                          .filter(event => !isAllDayEvent(event))
+                          .forEach(event => {
+                            allItems.push({
+                              type: 'busy',
+                              start: format(event.start, 'HH:mm'),
+                              end: format(event.end, 'HH:mm'),
+                              startTime: event.start,
+                              title: event.summary
+                            });
+                          });
 
-                      if (allItems.length === 0) {
+                        // Sort by start time
+                        allItems.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
+                        if (allItems.length === 0) {
+                          return (
+                            <div className="p-3 bg-muted/50 rounded-md border border-dashed">
+                              <p className="text-sm text-muted-foreground text-center">No slots or events for this day</p>
+                            </div>
+                          );
+                        }
+
                         return (
-                          <div className="p-3 bg-muted/50 rounded-md border border-dashed">
-                            <p className="text-sm text-muted-foreground text-center">No slots or events for this day</p>
-                          </div>
+                          <>
+                            <p className="text-xs font-medium mb-2">
+                              Time slots ({daySlots.slots.length} available, {dayEvents.filter(e => !isAllDayEvent(e)).length} busy):
+                            </p>
+                            <div className="space-y-1">
+                              {allItems.map((item, index) => (
+                                <div
+                                  key={index}
+                                  className={`flex items-center justify-between p-2 rounded-md border ${
+                                    item.type === 'available'
+                                      ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
+                                      : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'
+                                  }`}
+                                >
+                                  <div className="flex-1">
+                                    <span className={`text-sm font-medium ${
+                                      item.type === 'available'
+                                        ? 'text-green-800 dark:text-green-300'
+                                        : 'text-red-800 dark:text-red-300'
+                                    }`}>
+                                      {item.start} - {item.end}
+                                    </span>
+                                    {item.title && (
+                                      <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                                        {item.title}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    {item.type === 'available' ? (
+                                      <Clock className="h-3 w-3 text-green-600 dark:text-green-400" />
+                                    ) : (
+                                      <CalendarIcon className="h-3 w-3 text-red-600 dark:text-red-400" />
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </>
                         );
                       }
-
-                      return (
-                        <>
-                          <p className="text-xs font-medium mb-2">
-                            Time slots ({daySlots.slots.length} available, {dayEvents.filter(e => !isAllDayEvent(e)).length} busy):
-                          </p>
-                          <div className="space-y-1">
-                            {allItems.map((item, index) => (
-                              <div
-                                key={index}
-                                className={`flex items-center justify-between p-2 rounded-md border ${
-                                  item.type === 'available'
-                                    ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
-                                    : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'
-                                }`}
-                              >
-                                <div className="flex-1">
-                                  <span className={`text-sm font-medium ${
-                                    item.type === 'available'
-                                      ? 'text-green-800 dark:text-green-300'
-                                      : 'text-red-800 dark:text-red-300'
-                                  }`}>
-                                    {item.start} - {item.end}
-                                  </span>
-                                  {item.title && (
-                                    <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
-                                      {item.title}
-                                    </p>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  {item.type === 'available' ? (
-                                    <Clock className="h-3 w-3 text-green-600 dark:text-green-400" />
-                                  ) : (
-                                    <CalendarIcon className="h-3 w-3 text-red-600 dark:text-red-400" />
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </>
-                      );
                     })()}
                   </div>
                 </div>
