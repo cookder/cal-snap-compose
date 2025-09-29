@@ -131,7 +131,6 @@ const Index = () => {
 
   const handleEventsImported = (events: any[]) => {
     setImportedEvents(events);
-    setShowGoogleCalendar(false); // Hide Google calendar when ICS is used
     toast({
       title: "Events imported successfully",
       description: `Imported ${events.length} events from ICS file`,
@@ -215,13 +214,13 @@ const Index = () => {
         )}
         
         <div className={`grid gap-2 ${
-          showGoogleCalendar && showICSCalendar 
+          (showGoogleCalendar && showICSCalendar) || (!showGoogleCalendar && !showICSCalendar)
             ? 'grid-cols-1 lg:grid-cols-5' 
-            : 'grid-cols-1 lg:grid-cols-6'
+            : 'grid-cols-1 lg:grid-cols-4'
         }`}>
           {/* Google Calendar View */}
           {showGoogleCalendar && (
-            <div className={showICSCalendar ? "lg:col-span-1" : "lg:col-span-6"}>
+            <div className="lg:col-span-1">
               {credentials ? (
                 <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
                   <GoogleCalendarView 
@@ -245,7 +244,7 @@ const Index = () => {
 
           {/* ICS Import and Calendar View */}
           {showICSCalendar && (
-            <div className={showGoogleCalendar ? "lg:col-span-1" : "lg:col-span-6"}>
+            <div className="lg:col-span-1">
               {importedEvents.length === 0 ? (
                 <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
                   <ICSImporter onEventsImported={handleEventsImported} />
@@ -292,7 +291,7 @@ const Index = () => {
 
           {/* Sticky Container for Text Generator and Email Composer */}
           <div className={`lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:overflow-hidden ${
-            showGoogleCalendar && showICSCalendar ? 'lg:col-span-3' : 'hidden'
+            showGoogleCalendar || showICSCalendar ? 'lg:col-span-3' : 'hidden'
           }`}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 h-full">
               {/* Availability Text Generator */}
