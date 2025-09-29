@@ -285,18 +285,28 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
 
                   {/* Show available slots */}
                   {daySlots.slots.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {daySlots.slots.map((slot, index) => (
-                        <Badge
-                          key={index}
-                          className="bg-green-100 text-green-800 border-green-300"
-                        >
-                          {slot.start} - {slot.end}
-                        </Badge>
-                      ))}
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-green-700 dark:text-green-400 mb-2">
+                        Available slots ({daySlots.slots.length}):
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {daySlots.slots.map((slot, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-950/30 rounded-md border border-green-200 dark:border-green-800"
+                          >
+                            <span className="text-sm font-medium text-green-800 dark:text-green-300">
+                              {slot.start} - {slot.end}
+                            </span>
+                            <Clock className="h-3 w-3 text-green-600 dark:text-green-400" />
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">No available slots for this day</p>
+                    <div className="p-3 bg-muted/50 rounded-md border border-dashed">
+                      <p className="text-sm text-muted-foreground text-center">No available slots for this day</p>
+                    </div>
                   )}
                 </div>
               );
