@@ -91,7 +91,7 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
               end: format(slotEnd, 'HH:mm'),
               startTime: new Date(currentTime),
               endTime: new Date(slotEnd),
-              selected: false,
+              selected: true,
               id: `${format(selectedDate, 'yyyy-MM-dd')}-${format(currentTime, 'HH:mm')}-${duration}`
             });
           }
@@ -117,7 +117,7 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
             end: format(slotEnd, 'HH:mm'),
             startTime: new Date(currentTime),
             endTime: new Date(slotEnd),
-            selected: false,
+            selected: true,
             id: `${format(selectedDate, 'yyyy-MM-dd')}-${format(currentTime, 'HH:mm')}-${duration}`
           });
         }
