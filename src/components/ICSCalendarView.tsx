@@ -28,6 +28,19 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [slotDuration, setSlotDuration] = useState<30 | 60>(30);
   const [availability, setAvailability] = useState<AvailableSlot[]>([]);
+  // Helper: detect all-day events (00:00 to 00:00 next day or longer)
+  const isAllDayEvent = (event: CalendarEvent) => {
+    const start = event.start;
+    const end = event.end;
+    const durationMs = end.getTime() - start.getTime();
+    return (
+      start.getHours() === 0 &&
+      start.getMinutes() === 0 &&
+      end.getHours() === 0 &&
+      end.getMinutes() === 0 &&
+      durationMs >= 24 * 60 * 60 * 1000
+    );
+  };
 
   // Get events for a specific date
   const getEventsForDate = (date: Date) => {
@@ -37,7 +50,6 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
       (date >= startOfDay(event.start) && date <= endOfDay(event.end))
     );
   };
-
   // Generate availability for all selected dates
   const generateAvailability = () => {
     if (selectedDates.length === 0) {
@@ -59,15 +71,16 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
       const dayEnd = new Date(selectedDate);
       dayEnd.setHours(17, 0, 0, 0);
 
-      // Sort events by start time
-      const sortedEvents = dayEvents
+      // Consider only blocking events (ignore all-day/transparent-like events)
+      const blockingEvents = dayEvents
+        .filter(e => !isAllDayEvent(e))
         .filter(event => event.start < dayEnd && event.end > dayStart)
         .sort((a, b) => a.start.getTime() - b.start.getTime());
 
       let currentTime = dayStart;
 
       // Find gaps between events and create slots based on duration
-      for (const event of sortedEvents) {
+      for (const event of blockingEvents) {
         const eventStart = new Date(Math.max(event.start.getTime(), dayStart.getTime()));
         const eventEnd = new Date(Math.min(event.end.getTime(), dayEnd.getTime()));
 
@@ -217,7 +230,7 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
                 setSelectedDates(dates.sort((a, b) => a.getTime() - b.getTime()));
               }
             }}
-            disabled={(date) => date < new Date()}
+            disabled={(date) => startOfDay(date) < startOfDay(new Date())}
             className={cn("rounded-md border text-xs p-1 pointer-events-auto")}
             modifiers={{
               hasEvents: events.map(event => startOfDay(event.start))
