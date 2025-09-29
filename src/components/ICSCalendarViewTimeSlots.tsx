@@ -238,7 +238,61 @@ export function TimeSlotDisplay({
                         <p className="text-xs font-medium mb-2">
                           Time slots ({daySlots.slots.length} available, {daySlots.slots.filter(s => s.selected).length} selected, {dayEvents.filter(e => !isAllDayEvent(e)).length} busy):
                         </p>
-                         <div className="grid grid-cols-4 gap-1 items-start">
+                         <div className="flex gap-1">
+                           {/* Time axis on the left */}
+                           <div className="flex flex-col gap-1 w-16 text-xs text-muted-foreground">
+                             {(() => {
+                               // Group items by time ranges for the time axis
+                               const timeRanges: string[] = [];
+                               const groupedItems: Array<typeof allItems> = [];
+                               
+                               // Sort all items by start time first
+                               const sortedItems = [...allItems].sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+                               
+                               // Group items into rows (4 items per row)
+                               for (let i = 0; i < sortedItems.length; i += 4) {
+                                 const rowItems = sortedItems.slice(i, i + 4);
+                                 groupedItems.push(rowItems);
+                                 
+                                 if (rowItems.length > 0) {
+                                   const firstItem = rowItems[0];
+                                   const lastItem = rowItems[rowItems.length - 1];
+                                   timeRanges.push(`${firstItem.start}-${lastItem.end}`);
+                                 }
+                               }
+                               
+                               return timeRanges.map((timeRange, index) => {
+                                 let durationMinutes = 30; // default for height calculation
+                                 if (groupedItems[index] && groupedItems[index].length > 0) {
+                                   const firstItem = groupedItems[index][0];
+                                   if (firstItem.type === 'available') {
+                                     const [startHour, startMin] = firstItem.start.split(':').map(Number);
+                                     const [endHour, endMin] = firstItem.end.split(':').map(Number);
+                                     durationMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+                                   } else {
+                                     durationMinutes = parseInt(firstItem.end.split(':')[0]) * 60 + parseInt(firstItem.end.split(':')[1]) - 
+                                       (parseInt(firstItem.start.split(':')[0]) * 60 + parseInt(firstItem.start.split(':')[1]));
+                                   }
+                                 }
+                                 
+                                 const heightClass = durationMinutes <= 15 ? 'h-8' : 
+                                                   durationMinutes <= 30 ? 'h-16' : 
+                                                   durationMinutes <= 60 ? 'h-32' : 
+                                                   durationMinutes <= 90 ? 'h-48' : 'h-64';
+                                 
+                                 return (
+                                   <div key={index} className={`flex items-center justify-center border-r border-muted/30 ${heightClass} bg-muted/10 rounded-l-md px-1`}>
+                                     <span className="transform -rotate-90 whitespace-nowrap text-[10px] font-mono">
+                                       {timeRange}
+                                     </span>
+                                   </div>
+                                 );
+                               });
+                             })()}
+                           </div>
+                           
+                           {/* Main grid content */}
+                           <div className="grid grid-cols-4 gap-1 items-start flex-1">
                            {allItems.map((item, index) => {
                              let durationMinutes = 30; // default
                              if (item.type === 'available') {
@@ -291,8 +345,9 @@ export function TimeSlotDisplay({
                                  <div className="text-xs opacity-75 mt-auto">{durationMinutes}m</div>
                                </div>
                              );
-                           })}
-                        </div>
+                            })}
+                          </div>
+                         </div>
                       </>
                     );
                   }
