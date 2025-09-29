@@ -30,7 +30,7 @@ interface ICSCalendarViewProps {
 
 export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsChange, onClearEvents, onTogglePanel, showToggle }: ICSCalendarViewProps) {
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
-  const [slotDuration, setSlotDuration] = useState<30 | 60 | 'both' | 'custom'>('both');
+  const [slotDuration, setSlotDuration] = useState<30 | 60 | 'both' | 'custom' | 'grouped'>('both');
   const [customDuration, setCustomDuration] = useState<number>(15);
   const [availability, setAvailability] = useState<AvailableSlot[]>([]);
   // Helper: detect all-day events (00:00 to 00:00 next day or longer)
@@ -151,7 +151,43 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
       let allTimeSlots: TimeSlot[] = [];
 
       // Generate slots based on duration type
-      if (slotDuration === 'both') {
+      if (slotDuration === 'grouped') {
+        // Generate 30-minute base slots first
+        const baseSlots = generateSlotsForDuration(selectedDate, blockingEvents, 30);
+        
+        // Group consecutive slots
+        const groupedSlots: TimeSlot[] = [];
+        let i = 0;
+        
+        while (i < baseSlots.length) {
+          const currentSlot = baseSlots[i];
+          let endSlot = currentSlot;
+          let j = i + 1;
+          
+          // Find consecutive slots
+          while (j < baseSlots.length && baseSlots[j].startTime.getTime() === endSlot.endTime.getTime()) {
+            endSlot = baseSlots[j];
+            j++;
+          }
+          
+          // Calculate duration in minutes
+          const durationMinutes = (endSlot.endTime.getTime() - currentSlot.startTime.getTime()) / (1000 * 60);
+          
+          // Create grouped slot
+          groupedSlots.push({
+            start: currentSlot.start,
+            end: endSlot.end,
+            startTime: currentSlot.startTime,
+            endTime: endSlot.endTime,
+            selected: true,
+            id: `grouped-${format(selectedDate, 'yyyy-MM-dd')}-${format(currentSlot.startTime, 'HH:mm')}-${durationMinutes}`
+          });
+          
+          i = j;
+        }
+        
+        allTimeSlots = groupedSlots;
+      } else if (slotDuration === 'both') {
         // Generate both 30 and 60 minute slots with unique IDs
         const slots30 = generateSlotsForDuration(selectedDate, blockingEvents, 30);
         const slots60 = generateSlotsForDuration(selectedDate, blockingEvents, 60);
@@ -229,7 +265,7 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
     if (value === '30' || value === '60') {
       setSlotDuration(parseInt(value) as 30 | 60);
     } else {
-      setSlotDuration(value as 'both' | 'custom');
+      setSlotDuration(value as 'both' | 'custom' | 'grouped');
     }
   };
 
@@ -311,6 +347,7 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
                 <SelectItem value="30">30 min</SelectItem>
                 <SelectItem value="60">60 min</SelectItem>
                 <SelectItem value="both">Both (30 & 60)</SelectItem>
+                <SelectItem value="grouped">Grouped Chunks</SelectItem>
                 <SelectItem value="custom">Custom</SelectItem>
               </SelectContent>
             </Select>
