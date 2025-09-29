@@ -26,7 +26,8 @@ interface ICSCalendarViewProps {
 
 export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }: ICSCalendarViewProps) {
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
-  const [slotDuration, setSlotDuration] = useState<30 | 60>(30);
+  const [slotDuration, setSlotDuration] = useState<30 | 60 | 'both' | 'custom'>(30);
+  const [customDuration, setCustomDuration] = useState<number>(15);
   const [availability, setAvailability] = useState<AvailableSlot[]>([]);
   // Helper: detect all-day events (00:00 to 00:00 next day or longer)
   const isAllDayEvent = (event: CalendarEvent) => {
@@ -50,6 +51,75 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
       (date >= startOfDay(event.start) && date <= endOfDay(event.end))
     );
   };
+  // Helper function to generate slots for a specific duration
+  const generateSlotsForDuration = (
+    selectedDate: Date, 
+    blockingEvents: CalendarEvent[], 
+    duration: number
+  ): TimeSlot[] => {
+    const timeSlots: TimeSlot[] = [];
+    
+    // Working hours: 9 AM to 5 PM (standard business hours)
+    const dayStart = new Date(selectedDate);
+    dayStart.setHours(9, 0, 0, 0);
+    
+    const dayEnd = new Date(selectedDate);
+    dayEnd.setHours(17, 0, 0, 0);
+
+    let currentTime = dayStart;
+
+    // Find gaps between events and create slots based on duration
+    for (const event of blockingEvents) {
+      const eventStart = new Date(Math.max(event.start.getTime(), dayStart.getTime()));
+      const eventEnd = new Date(Math.min(event.end.getTime(), dayEnd.getTime()));
+
+      // Generate slots before this event if there's a gap
+      while (currentTime < eventStart) {
+        const slotEnd = new Date(Math.min(
+          addMinutes(currentTime, duration).getTime(),
+          eventStart.getTime()
+        ));
+
+        // Only add slot if it's the full duration
+        if (slotEnd.getTime() - currentTime.getTime() >= duration * 60 * 1000) {
+          timeSlots.push({
+            start: format(currentTime, 'HH:mm'),
+            end: format(slotEnd, 'HH:mm'),
+            startTime: new Date(currentTime),
+            endTime: new Date(slotEnd)
+          });
+        }
+
+        currentTime = addMinutes(currentTime, duration);
+      }
+
+      // Move current time to after this event
+      currentTime = new Date(Math.max(currentTime.getTime(), eventEnd.getTime()));
+    }
+
+    // Generate remaining slots after all events
+    while (currentTime < dayEnd) {
+      const slotEnd = new Date(Math.min(
+        addMinutes(currentTime, duration).getTime(),
+        dayEnd.getTime()
+      ));
+
+      // Only add slot if it's the full duration
+      if (slotEnd.getTime() - currentTime.getTime() >= duration * 60 * 1000) {
+        timeSlots.push({
+          start: format(currentTime, 'HH:mm'),
+          end: format(slotEnd, 'HH:mm'),
+          startTime: new Date(currentTime),
+          endTime: new Date(slotEnd)
+        });
+      }
+
+      currentTime = addMinutes(currentTime, duration);
+    }
+
+    return timeSlots;
+  };
+
   // Generate availability for all selected dates
   const generateAvailability = () => {
     if (selectedDates.length === 0) {
@@ -62,75 +132,38 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
 
     for (const selectedDate of selectedDates) {
       const dayEvents = getEventsForDate(selectedDate);
-      const timeSlots: TimeSlot[] = [];
-
-      // Working hours: 9 AM to 5 PM (standard business hours)
-      const dayStart = new Date(selectedDate);
-      dayStart.setHours(9, 0, 0, 0);
-      
-      const dayEnd = new Date(selectedDate);
-      dayEnd.setHours(17, 0, 0, 0);
 
       // Consider only blocking events (ignore all-day/transparent-like events)
       const blockingEvents = dayEvents
         .filter(e => !isAllDayEvent(e))
-        .filter(event => event.start < dayEnd && event.end > dayStart)
+        .filter(event => event.start < new Date(selectedDate.getTime() + 17 * 60 * 60 * 1000) && 
+                        event.end > new Date(selectedDate.getTime() + 9 * 60 * 60 * 1000))
         .sort((a, b) => a.start.getTime() - b.start.getTime());
 
-      let currentTime = dayStart;
+      let allTimeSlots: TimeSlot[] = [];
 
-      // Find gaps between events and create slots based on duration
-      for (const event of blockingEvents) {
-        const eventStart = new Date(Math.max(event.start.getTime(), dayStart.getTime()));
-        const eventEnd = new Date(Math.min(event.end.getTime(), dayEnd.getTime()));
-
-        // Generate slots before this event if there's a gap
-        while (currentTime < eventStart) {
-          const slotEnd = new Date(Math.min(
-            addMinutes(currentTime, slotDuration).getTime(),
-            eventStart.getTime()
-          ));
-
-          // Only add slot if it's the full duration
-          if (slotEnd.getTime() - currentTime.getTime() >= slotDuration * 60 * 1000) {
-            timeSlots.push({
-              start: format(currentTime, 'HH:mm'),
-              end: format(slotEnd, 'HH:mm'),
-              startTime: new Date(currentTime),
-              endTime: new Date(slotEnd)
-            });
-          }
-
-          currentTime = addMinutes(currentTime, slotDuration);
-        }
-
-        // Move current time to after this event
-        currentTime = new Date(Math.max(currentTime.getTime(), eventEnd.getTime()));
-      }
-
-      // Generate remaining slots after all events
-      while (currentTime < dayEnd) {
-        const slotEnd = new Date(Math.min(
-          addMinutes(currentTime, slotDuration).getTime(),
-          dayEnd.getTime()
-        ));
-
-        // Only add slot if it's the full duration
-        if (slotEnd.getTime() - currentTime.getTime() >= slotDuration * 60 * 1000) {
-          timeSlots.push({
-            start: format(currentTime, 'HH:mm'),
-            end: format(slotEnd, 'HH:mm'),
-            startTime: new Date(currentTime),
-            endTime: new Date(slotEnd)
-          });
-        }
-
-        currentTime = addMinutes(currentTime, slotDuration);
+      // Generate slots based on duration type
+      if (slotDuration === 'both') {
+        // Generate both 30 and 60 minute slots
+        const slots30 = generateSlotsForDuration(selectedDate, blockingEvents, 30);
+        const slots60 = generateSlotsForDuration(selectedDate, blockingEvents, 60);
+        
+        // Merge and sort by start time, remove duplicates
+        const allSlots = [...slots30, ...slots60];
+        allTimeSlots = allSlots
+          .filter((slot, index, arr) => 
+            arr.findIndex(s => s.start === slot.start && s.end === slot.end) === index
+          )
+          .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+      } else if (slotDuration === 'custom') {
+        allTimeSlots = generateSlotsForDuration(selectedDate, blockingEvents, customDuration);
+      } else {
+        allTimeSlots = generateSlotsForDuration(selectedDate, blockingEvents, slotDuration);
       }
 
       availableSlots.push({
         date: selectedDate,
-        slots: timeSlots
+        slots: allTimeSlots
       });
     }
 
@@ -141,7 +174,7 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
   // Auto-generate availability when dates or slot duration changes
   useEffect(() => {
     generateAvailability();
-  }, [selectedDates, slotDuration, events]);
+  }, [selectedDates, slotDuration, customDuration, events]);
 
   // Remove a selected date
   const removeDate = (dateToRemove: Date) => {
@@ -150,8 +183,11 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
 
   // Handle slot duration change
   const handleSlotDurationChange = (value: string) => {
-    const newDuration = parseInt(value) as 30 | 60;
-    setSlotDuration(newDuration);
+    if (value === '30' || value === '60') {
+      setSlotDuration(parseInt(value) as 30 | 60);
+    } else {
+      setSlotDuration(value as 'both' | 'custom');
+    }
   };
 
   // Format date for display
@@ -208,15 +244,38 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
         {/* Slot Duration Selection */}
         <div className="space-y-1">
           <label className="text-xs font-medium">Meeting Duration</label>
-          <Select value={slotDuration.toString()} onValueChange={handleSlotDurationChange}>
-            <SelectTrigger className="w-[140px] h-7 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="30">30 min</SelectItem>
-              <SelectItem value="60">60 min</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2 items-center">
+            <Select 
+              value={slotDuration.toString()} 
+              onValueChange={handleSlotDurationChange}
+            >
+              <SelectTrigger className="w-[140px] h-7 text-xs bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-background border shadow-md z-50">
+                <SelectItem value="30">30 min</SelectItem>
+                <SelectItem value="60">60 min</SelectItem>
+                <SelectItem value="both">Both (30 & 60)</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {slotDuration === 'custom' && (
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min="5"
+                  max="120"
+                  step="5"
+                  value={customDuration}
+                  onChange={(e) => setCustomDuration(Number(e.target.value))}
+                  className="w-16 h-7 px-2 text-xs border rounded-md bg-background"
+                  placeholder="15"
+                />
+                <span className="text-xs text-muted-foreground">min</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Calendar */}
