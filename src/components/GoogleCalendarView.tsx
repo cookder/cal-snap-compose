@@ -15,9 +15,11 @@ interface GoogleCalendarViewProps {
   onAvailabilityChange: (availability: AvailableSlot[]) => void;
   onSelectedSlotsChange: (selectedSlots: { date: Date; slots: TimeSlot[] }[]) => void;
   credentials: OAuthCredentials | null;
+  onTogglePanel?: () => void;
+  showToggle?: boolean;
 }
 
-const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityChange, onSelectedSlotsChange, credentials }) => {
+const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityChange, onSelectedSlotsChange, credentials, onTogglePanel, showToggle }) => {
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [events, setEvents] = useState<{ [key: string]: CalendarEvent[] }>({});
   const [availability, setAvailability] = useState<AvailableSlot[]>([]);
@@ -328,9 +330,21 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
   return (
     <Card className="shadow-md">
       <CardHeader className="pb-1 pt-3">
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <CalendarIcon className="h-4 w-4" />
-          Google Calendar Integration
+        <CardTitle className="flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2">
+            <CalendarIcon className="h-4 w-4" />
+            Google Calendar Integration
+          </div>
+          {showToggle && onTogglePanel && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onTogglePanel}
+              className="h-6 px-2 text-xs"
+            >
+              Hide
+            </Button>
+          )}
         </CardTitle>
         <CardDescription className="text-xs">
           Connect your Google Calendar to view your availability

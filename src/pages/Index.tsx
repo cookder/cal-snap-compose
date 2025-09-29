@@ -26,6 +26,8 @@ const Index = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [availability, setAvailability] = useState<AvailableSlot[]>([]);
   const [selectedSlots, setSelectedSlots] = useState<{ date: Date; slots: TimeSlot[] }[]>([]);
+  const [showGoogleCalendar, setShowGoogleCalendar] = useState(true);
+  const [showICSCalendar, setShowICSCalendar] = useState(true);
   const [availabilityText, setAvailabilityText] = useState("");
   const [credentials, setCredentials] = useState<OAuthCredentials | null>(null);
   const [credentialsError, setCredentialsError] = useState<string | null>(null);
@@ -129,6 +131,7 @@ const Index = () => {
 
   const handleEventsImported = (events: any[]) => {
     setImportedEvents(events);
+    setShowGoogleCalendar(false); // Hide Google calendar when ICS is used
     toast({
       title: "Events imported successfully",
       description: `Imported ${events.length} events from ICS file`,
@@ -139,6 +142,7 @@ const Index = () => {
     setImportedEvents([]);
     setAvailability([]); // Clear availability when clearing events
     setSelectedSlots([]); // Clear selected slots when clearing events
+    setShowICSCalendar(true); // Show ICS panel again when cleared
     toast({
       title: "Imported events cleared",
     });
@@ -210,44 +214,81 @@ const Index = () => {
           </div>
         )}
         
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-2 auto-rows-min">
+        <div className={`grid gap-2 ${
+          showGoogleCalendar && showICSCalendar 
+            ? 'grid-cols-1 lg:grid-cols-4' 
+            : 'grid-cols-1 lg:grid-cols-3'
+        }`}>
           {/* Google Calendar View */}
-          <div className="lg:col-span-1">
-            {credentials ? (
-              <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
-                <GoogleCalendarView 
-                  onAvailabilityChange={setAvailability} 
-                  onSelectedSlotsChange={handleSelectedSlotsChange}
-                  credentials={credentials}
-                />
-              </Suspense>
-            ) : (
-              <div className="h-full flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
-                <div className="text-center text-muted-foreground">
-                  <AlertCircle className="h-8 w-8 mx-auto mb-2" />
-                  <p className="text-sm">Waiting for Google OAuth credentials...</p>
+          {showGoogleCalendar && (
+            <div className={showICSCalendar ? "lg:col-span-1" : "lg:col-span-1"}>
+              {credentials ? (
+                <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
+                  <GoogleCalendarView 
+                    onAvailabilityChange={setAvailability} 
+                    onSelectedSlotsChange={handleSelectedSlotsChange}
+                    credentials={credentials}
+                    onTogglePanel={() => setShowGoogleCalendar(false)}
+                    showToggle={showICSCalendar || importedEvents.length > 0}
+                  />
+                </Suspense>
+              ) : (
+                <div className="h-full flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
+                  <div className="text-center text-muted-foreground">
+                    <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+                    <p className="text-sm">Waiting for Google OAuth credentials...</p>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* ICS Import and Calendar View */}
-          <div className="lg:col-span-1">
-            {importedEvents.length === 0 ? (
-              <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
-                <ICSImporter onEventsImported={handleEventsImported} />
-              </Suspense>
-            ) : (
-              <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
-                <ICSCalendarView 
-                  events={importedEvents}
-                  onAvailabilityChange={setAvailability}
-                  onSelectedSlotsChange={handleSelectedSlotsChange}
-                  onClearEvents={handleClearImportedEvents}
-                />
-              </Suspense>
-            )}
-          </div>
+          {showICSCalendar && (
+            <div className={showGoogleCalendar ? "lg:col-span-1" : "lg:col-span-1"}>
+              {importedEvents.length === 0 ? (
+                <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
+                  <ICSImporter onEventsImported={handleEventsImported} />
+                </Suspense>
+              ) : (
+                <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
+                  <ICSCalendarView 
+                    events={importedEvents}
+                    onAvailabilityChange={setAvailability}
+                    onSelectedSlotsChange={handleSelectedSlotsChange}
+                    onClearEvents={handleClearImportedEvents}
+                    onTogglePanel={() => setShowICSCalendar(false)}
+                    showToggle={showGoogleCalendar}
+                  />
+                </Suspense>
+              )}
+            </div>
+          )}
+
+          {/* Hidden Panel Toggles */}
+          {!showGoogleCalendar && (
+            <div className="lg:col-span-1 flex items-start">
+              <Button
+                variant="outline"
+                onClick={() => setShowGoogleCalendar(true)}
+                className="w-full h-12 border-dashed border-2 text-muted-foreground hover:text-foreground"
+              >
+                Show Google Calendar
+              </Button>
+            </div>
+          )}
+          
+          {!showICSCalendar && (
+            <div className="lg:col-span-1 flex items-start">
+              <Button
+                variant="outline"
+                onClick={() => setShowICSCalendar(true)}
+                className="w-full h-12 border-dashed border-2 text-muted-foreground hover:text-foreground"
+              >
+                Show ICS Calendar
+              </Button>
+            </div>
+          )}
 
           {/* Sticky Container for Text Generator and Email Composer */}
           <div className="lg:col-span-2 lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:overflow-hidden">
