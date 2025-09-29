@@ -40,7 +40,7 @@ export function TimeSlotDisplay({
     <div className="space-y-2">
       <h3 className="text-sm font-semibold">Available Time Slots</h3>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3">
         {availability.map((daySlots) => {
           const dayEvents = getEventsForDate(daySlots.date);
           return (
@@ -74,12 +74,12 @@ export function TimeSlotDisplay({
                           {(() => {
                             const slots30 = daySlots.slots.filter(s => s.id?.startsWith('30-'));
                             return slots30.length > 0 ? (
-                              <div className="grid grid-cols-2 gap-1">
+                               <div className="flex flex-col gap-1">
                                 {slots30.map((slot, index) => (
                                   <button
                                     key={`30-${index}`}
                                     onClick={() => toggleSlotSelection(slot.id!)}
-                                    className={`flex items-center justify-between p-2 rounded-md border transition-all ${
+                                    className={`w-full flex items-center justify-between p-2 rounded-md border transition-all ${
                                       slot.selected
                                         ? 'bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500 ring-opacity-50'
                                         : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 hover:bg-blue-75 dark:hover:bg-blue-900/40'
@@ -106,12 +106,12 @@ export function TimeSlotDisplay({
                           {(() => {
                             const slots60 = daySlots.slots.filter(s => s.id?.startsWith('60-'));
                             return slots60.length > 0 ? (
-                              <div className="grid grid-cols-2 gap-1">
+                              <div className="flex flex-col gap-1">
                                 {slots60.map((slot, index) => (
                                   <button
                                     key={`60-${index}`}
                                     onClick={() => toggleSlotSelection(slot.id!)}
-                                    className={`flex items-center justify-between p-2 rounded-md border transition-all ${
+                                    className={`w-full flex items-center justify-between p-2 rounded-md border transition-all ${
                                       slot.selected
                                         ? 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 ring-2 ring-green-500 ring-opacity-50'
                                         : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-75 dark:hover:bg-green-900/40'
@@ -212,124 +212,60 @@ export function TimeSlotDisplay({
                     return (
                       <>
                         <p className="text-xs font-medium mb-2">
-                          Time slots ({daySlots.slots.length} available, {daySlots.slots.filter(s => s.selected).length} selected, {dayEvents.filter(e => !isAllDayEvent(e)).length} busy):
+                          Time slots ({daySlots.slots.length} available, {daySlots.slots.filter(s => s.selected).length} selected{dayEvents.filter(e => !isAllDayEvent(e)).length ? `, ${dayEvents.filter(e => !isAllDayEvent(e)).length} busy` : ''}):
                         </p>
-                         <div className="flex gap-1">
-                           {/* Time axis on the left */}
-                           <div className="flex flex-col gap-1 w-16 text-xs text-muted-foreground">
-                             {(() => {
-                               // Group items by time ranges for the time axis
-                               const timeRanges: string[] = [];
-                               const groupedItems: Array<typeof allItems> = [];
-                               
-                               // Sort all items by start time first
-                               const sortedItems = [...allItems].sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-                               
-                               // Group items into rows (4 items per row)
-                               for (let i = 0; i < sortedItems.length; i += 4) {
-                                 const rowItems = sortedItems.slice(i, i + 4);
-                                 groupedItems.push(rowItems);
-                                 
-                                 if (rowItems.length > 0) {
-                                   const firstItem = rowItems[0];
-                                   const lastItem = rowItems[rowItems.length - 1];
-                                   timeRanges.push(`${firstItem.start}-${lastItem.end}`);
-                                 }
-                               }
-                               
-                               return timeRanges.map((timeRange, index) => {
-                                 let durationMinutes = 30; // default for height calculation
-                                 if (groupedItems[index] && groupedItems[index].length > 0) {
-                                   const firstItem = groupedItems[index][0];
-                                   if (firstItem.type === 'available') {
-                                     const [startHour, startMin] = firstItem.start.split(':').map(Number);
-                                     const [endHour, endMin] = firstItem.end.split(':').map(Number);
-                                     durationMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-                                   } else {
-                                     durationMinutes = parseInt(firstItem.end.split(':')[0]) * 60 + parseInt(firstItem.end.split(':')[1]) - 
-                                       (parseInt(firstItem.start.split(':')[0]) * 60 + parseInt(firstItem.start.split(':')[1]));
-                                   }
-                                 }
-                                 
-                                 const heightClass = durationMinutes <= 15 ? 'h-8' : 
-                                                   durationMinutes <= 30 ? 'h-16' : 
-                                                   durationMinutes <= 60 ? 'h-32' : 
-                                                   durationMinutes <= 90 ? 'h-48' : 'h-64';
-                                 
-                                 return (
-                                   <div key={index} className={`flex items-center justify-center border-r border-muted/30 ${heightClass} bg-muted/10 rounded-l-md px-1`}>
-                                     <span className="transform -rotate-90 whitespace-nowrap text-[10px] font-mono">
-                                       {timeRange}
-                                     </span>
-                                   </div>
-                                 );
-                               });
-                             })()}
-                           </div>
-                           
-                           {/* Main grid content */}
-                           <div className="grid grid-cols-4 gap-1 items-start flex-1">
-                           {allItems.map((item, index) => {
-                             let durationMinutes = 30; // default
-                             if (item.type === 'available') {
-                               // Calculate duration from time strings
-                               const [startHour, startMin] = item.start.split(':').map(Number);
-                               const [endHour, endMin] = item.end.split(':').map(Number);
-                               durationMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-                             } else {
-                               // Calculate duration from Date objects for busy events
-                               const durationMs = item.startTime.getTime() - item.startTime.getTime();
-                               durationMinutes = Math.round(durationMs / (1000 * 60)) || 
-                                 parseInt(item.end.split(':')[0]) * 60 + parseInt(item.end.split(':')[1]) - 
-                                 (parseInt(item.start.split(':')[0]) * 60 + parseInt(item.start.split(':')[1]));
-                             }
-                             
-                             // Proportional heights: 15min=h-8, 30min=h-16, 60min=h-32, 90min=h-48, 120min=h-64
-                             const heightClass = durationMinutes <= 15 ? 'h-8' : 
-                                               durationMinutes <= 30 ? 'h-16' : 
-                                               durationMinutes <= 60 ? 'h-32' : 
-                                               durationMinutes <= 90 ? 'h-48' : 'h-64';
-                             
-                             return item.type === 'available' ? (
+                        <div className="space-y-2">
+                          <div className="space-y-1">
+                            {daySlots.slots.length > 0 ? (
+                              daySlots.slots.map((slot, index) => (
                                 <button
                                   key={index}
-                                  onClick={() => toggleSlotSelection(item.id!)}
-                                  className={`p-1 rounded-md border transition-all text-xs flex flex-col justify-between ${heightClass} ${
-                                    item.selected
+                                  onClick={() => toggleSlotSelection(slot.id!)}
+                                  className={`w-full flex items-center justify-between p-2 rounded-md border transition-all ${
+                                    slot.selected
                                       ? 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 ring-2 ring-green-500 ring-opacity-50'
                                       : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-75 dark:hover:bg-green-900/40'
                                   }`}
                                 >
-                                  <div className="font-medium text-green-800 dark:text-green-300 text-[10px] leading-tight text-center">
-                                    {item.start}
-                                  </div>
-                                  <div className="font-medium text-green-800 dark:text-green-300 text-[10px] leading-tight text-center">
-                                    {item.end}
-                                  </div>
-                                  <div className="text-[10px] opacity-75">{durationMinutes}m</div>
+                                  <span className="text-sm font-medium text-green-800 dark:text-green-300">
+                                    {slot.start} - {slot.end}
+                                  </span>
+                                  <Clock className="h-3 w-3 text-green-600 dark:text-green-400" />
                                 </button>
-                             ) : (
-                                <div
-                                  key={index}
-                                  className={`p-1 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800 text-xs flex flex-col ${heightClass}`}
-                                >
-                                  <div className="font-medium text-red-800 dark:text-red-300 text-[10px] leading-tight text-center">
-                                    {item.start}
-                                  </div>
-                                  <div className="font-medium text-red-800 dark:text-red-300 text-[10px] leading-tight text-center">
-                                    {item.end}
-                                  </div>
-                                  {item.title && (
-                                    <div className="text-red-600 dark:text-red-400 flex-1 py-1 overflow-hidden leading-tight break-words text-[10px]">
-                                      {item.title}
-                                    </div>
-                                  )}
-                                  <div className="text-[10px] opacity-75 mt-auto">{durationMinutes}m</div>
-                                </div>
-                             );
-                            })}
+                              ))
+                            ) : (
+                              <p className="text-xs text-muted-foreground">No slots available</p>
+                            )}
                           </div>
-                         </div>
+                          {dayEvents.filter(e => !isAllDayEvent(e)).length > 0 && (
+                            <div className="pt-1">
+                              <p className="text-xs font-medium mb-2 text-red-700 dark:text-red-400">
+                                Existing events ({dayEvents.filter(e => !isAllDayEvent(e)).length}):
+                              </p>
+                              <div className="space-y-1">
+                                {dayEvents
+                                  .filter(event => !isAllDayEvent(event))
+                                  .sort((a, b) => a.start.getTime() - b.start.getTime())
+                                  .map((event, index) => (
+                                    <div
+                                      key={index}
+                                      className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800"
+                                    >
+                                      <div className="flex-1">
+                                        <span className="text-sm font-medium text-red-800 dark:text-red-300">
+                                          {format(event.start, 'h:mm a')} - {format(event.end, 'h:mm a')}
+                                        </span>
+                                        <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                                          {event.summary}
+                                        </p>
+                                      </div>
+                                      <CalendarIcon className="h-3 w-3 text-red-600 dark:text-red-400" />
+                                    </div>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </>
                     );
                   }

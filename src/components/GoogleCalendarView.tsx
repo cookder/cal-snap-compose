@@ -491,12 +491,12 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                               {(() => {
                                 const slots30 = daySlots.slots.filter(s => s.id?.startsWith('30-'));
                                 return slots30.length > 0 ? (
-                                  <div className="grid grid-cols-2 gap-1">
+                                  <div className="flex flex-col gap-1">
                                     {slots30.map((slot, index) => (
                                       <button
                                         key={`30-${index}`}
                                         onClick={() => toggleSlotSelection(slot.id!)}
-                                        className={`flex items-center justify-between p-2 rounded-md border transition-all ${
+                                        className={`w-full flex items-center justify-between p-2 rounded-md border transition-all ${
                                           slot.selected
                                             ? 'bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500 ring-opacity-50'
                                             : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 hover:bg-blue-75 dark:hover:bg-blue-900/40'
@@ -523,12 +523,12 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                               {(() => {
                                 const slots60 = daySlots.slots.filter(s => s.id?.startsWith('60-'));
                                 return slots60.length > 0 ? (
-                                  <div className="grid grid-cols-2 gap-1">
+                                  <div className="flex flex-col gap-1">
                                     {slots60.map((slot, index) => (
                                       <button
                                         key={`60-${index}`}
                                         onClick={() => toggleSlotSelection(slot.id!)}
-                                        className={`flex items-center justify-between p-2 rounded-md border transition-all ${
+                                        className={`w-full flex items-center justify-between p-2 rounded-md border transition-all ${
                                           slot.selected
                                             ? 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 ring-2 ring-green-500 ring-opacity-50'
                                             : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-75 dark:hover:bg-green-900/40'
