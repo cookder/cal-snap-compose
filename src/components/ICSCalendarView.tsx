@@ -30,7 +30,7 @@ interface ICSCalendarViewProps {
 
 export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsChange, onClearEvents, onTogglePanel, showToggle }: ICSCalendarViewProps) {
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
-  const [slotDuration, setSlotDuration] = useState<30 | 60 | 'both' | 'custom' | 'grouped'>('both');
+  const [slotDuration, setSlotDuration] = useState<15 | 30 | 60 | 'both' | 'custom' | 'grouped'>('both');
   const [customDuration, setCustomDuration] = useState<number>(15);
   const [availability, setAvailability] = useState<AvailableSlot[]>([]);
   // Helper: detect all-day events (00:00 to 00:00 next day or longer)
@@ -262,8 +262,8 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
 
   // Handle slot duration change
   const handleSlotDurationChange = (value: string) => {
-    if (value === '30' || value === '60') {
-      setSlotDuration(parseInt(value) as 30 | 60);
+    if (value === '15' || value === '30' || value === '60') {
+      setSlotDuration(parseInt(value) as 15 | 30 | 60);
     } else {
       setSlotDuration(value as 'both' | 'custom' | 'grouped');
     }
@@ -344,6 +344,7 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-background border shadow-md z-50">
+                <SelectItem value="15">15 min</SelectItem>
                 <SelectItem value="30">30 min</SelectItem>
                 <SelectItem value="60">60 min</SelectItem>
                 <SelectItem value="both">Both (30 & 60)</SelectItem>

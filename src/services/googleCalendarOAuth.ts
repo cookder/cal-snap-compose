@@ -78,7 +78,7 @@ class GoogleCalendarOAuthService extends GoogleOAuthService {
 
   async getAvailableSlots(
     selectedDates: Date[], 
-    slotDuration: 30 | 60 = 30,
+    slotDuration: 15 | 30 | 60 = 30,
     workingHours = { start: 9, end: 17 }
   ): Promise<AvailableSlot[]> {
     const availableSlots: AvailableSlot[] = [];

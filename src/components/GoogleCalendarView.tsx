@@ -25,7 +25,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
   const [availability, setAvailability] = useState<AvailableSlot[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [slotDuration, setSlotDuration] = useState<30 | 60 | 'both' | 'custom' | 'grouped'>('both');
+  const [slotDuration, setSlotDuration] = useState<15 | 30 | 60 | 'both' | 'custom' | 'grouped'>('both');
   const [customDuration, setCustomDuration] = useState<number>(15);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [calendarService, setCalendarService] = useState<GoogleCalendarOAuthService | null>(null);
@@ -148,7 +148,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
     if (!calendarService) return [];
     
     // Use the calendar service but with custom duration
-    return await calendarService.getAvailableSlots(selectedDates, duration as 30 | 60);
+    return await calendarService.getAvailableSlots(selectedDates, duration as 15 | 30 | 60);
   };
 
   const fetchCalendarData = async () => {
@@ -273,7 +273,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
           }))
         }));
       } else {
-        const baseSlots = await calendarService.getAvailableSlots(selectedDates, slotDuration);
+        const baseSlots = await calendarService.getAvailableSlots(selectedDates, slotDuration as 15 | 30 | 60);
         availableSlots = baseSlots.map(daySlot => ({
           ...daySlot,
           slots: daySlot.slots.map(slot => ({
@@ -334,8 +334,8 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
   };
 
   const handleSlotDurationChange = (value: string) => {
-    if (value === '30' || value === '60') {
-      setSlotDuration(parseInt(value) as 30 | 60);
+    if (value === '15' || value === '30' || value === '60') {
+      setSlotDuration(parseInt(value) as 15 | 30 | 60);
     } else {
       setSlotDuration(value as 'both' | 'custom' | 'grouped');
     }
@@ -441,6 +441,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-background border shadow-md z-50">
+                  <SelectItem value="15">15 min</SelectItem>
                   <SelectItem value="30">30 min</SelectItem>
                   <SelectItem value="60">60 min</SelectItem>
                   <SelectItem value="both">Both (30 & 60)</SelectItem>

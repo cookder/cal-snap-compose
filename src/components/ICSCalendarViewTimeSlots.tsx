@@ -15,7 +15,7 @@ interface CalendarEvent {
 
 interface TimeSlotDisplayProps {
   availability: AvailableSlot[];
-  slotDuration: 30 | 60 | 'both' | 'custom' | 'grouped';
+  slotDuration: 15 | 30 | 60 | 'both' | 'custom' | 'grouped';
   getEventsForDate: (date: Date) => CalendarEvent[];
   isAllDayEvent: (event: CalendarEvent) => boolean;
   generateSlotsForDuration: (date: Date, blockingEvents: CalendarEvent[], duration: number) => TimeSlot[];
