@@ -254,11 +254,22 @@ export function TimeSlotDisplay({
                                  const rowItems = sortedItems.slice(i, i + 4);
                                  groupedItems.push(rowItems);
                                  
-                                 if (rowItems.length > 0) {
-                                   const firstItem = rowItems[0];
-                                   const lastItem = rowItems[rowItems.length - 1];
-                                   timeRanges.push(`${firstItem.start}-${lastItem.end}`);
-                                 }
+                                  if (rowItems.length > 0) {
+                                    const firstItem = rowItems[0];
+                                    const lastItem = rowItems[rowItems.length - 1];
+                                    
+                                    // Convert to standard time format
+                                    const formatTime = (timeStr: string) => {
+                                      const [hours, minutes] = timeStr.split(':').map(Number);
+                                      const date = new Date();
+                                      date.setHours(hours, minutes);
+                                      return format(date, 'h:mm a');
+                                    };
+                                    
+                                    const startTime = formatTime(firstItem.start);
+                                    const endTime = formatTime(lastItem.end);
+                                    timeRanges.push(`${startTime}-${endTime}`);
+                                  }
                                }
                                
                                return timeRanges.map((timeRange, index) => {
@@ -282,9 +293,9 @@ export function TimeSlotDisplay({
                                  
                                  return (
                                    <div key={index} className={`flex items-center justify-center border-r border-muted/30 ${heightClass} bg-muted/10 rounded-l-md px-1`}>
-                                     <span className="transform -rotate-90 whitespace-nowrap text-[10px] font-mono">
-                                       {timeRange}
-                                     </span>
+                                    <span className="transform -rotate-90 whitespace-nowrap text-xs font-bold font-mono">
+                                      {timeRange}
+                                    </span>
                                    </div>
                                  );
                                });
