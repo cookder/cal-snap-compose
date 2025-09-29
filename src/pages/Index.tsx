@@ -216,12 +216,12 @@ const Index = () => {
         
         <div className={`grid gap-2 ${
           showGoogleCalendar && showICSCalendar 
-            ? 'grid-cols-1 lg:grid-cols-4' 
-            : 'grid-cols-1 lg:grid-cols-3'
+            ? 'grid-cols-1 lg:grid-cols-5' 
+            : 'grid-cols-1 lg:grid-cols-4'
         }`}>
           {/* Google Calendar View */}
           {showGoogleCalendar && (
-            <div className={showICSCalendar ? "lg:col-span-1" : "lg:col-span-1"}>
+            <div className={showICSCalendar ? "lg:col-span-1" : "lg:col-span-2"}>
               {credentials ? (
                 <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
                   <GoogleCalendarView 
@@ -245,7 +245,7 @@ const Index = () => {
 
           {/* ICS Import and Calendar View */}
           {showICSCalendar && (
-            <div className={showGoogleCalendar ? "lg:col-span-1" : "lg:col-span-1"}>
+            <div className={showGoogleCalendar ? "lg:col-span-1" : "lg:col-span-2"}>
               {importedEvents.length === 0 ? (
                 <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
                   <ICSImporter onEventsImported={handleEventsImported} />
@@ -291,7 +291,9 @@ const Index = () => {
           )}
 
           {/* Sticky Container for Text Generator and Email Composer */}
-          <div className="lg:col-span-2 lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:overflow-hidden">
+          <div className={`lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:overflow-hidden ${
+            showGoogleCalendar && showICSCalendar ? 'lg:col-span-3' : 'lg:col-span-2'
+          }`}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 h-full">
               {/* Availability Text Generator */}
               <div className="h-full">
