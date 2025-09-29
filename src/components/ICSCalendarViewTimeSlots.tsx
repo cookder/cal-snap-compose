@@ -74,22 +74,29 @@ export function TimeSlotDisplay({
                           {(() => {
                             const slots30 = daySlots.slots.filter(s => s.id?.startsWith('30-'));
                             return slots30.length > 0 ? (
-                              <div className="grid grid-cols-3 gap-1">
-                                {slots30.map((slot, index) => (
-                                  <button
-                                    key={`30-${index}`}
-                                    onClick={() => toggleSlotSelection(slot.id!)}
-                                    className={`p-2 rounded-md border transition-all text-xs ${
-                                      slot.selected
-                                        ? 'bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500 ring-opacity-50'
-                                        : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 hover:bg-blue-75 dark:hover:bg-blue-900/40'
-                                    }`}
-                                  >
-                                    <div className="font-medium text-blue-800 dark:text-blue-300">
-                                      {slot.start}-{slot.end}
-                                    </div>
-                                  </button>
-                                ))}
+                         <div className="grid grid-cols-6 gap-1">
+                                 {slots30.map((slot, index) => {
+                                   const duration = 30; // 30 minutes
+                                   const colSpan = Math.min(Math.max(Math.ceil(duration / 15), 1), 2); // 1-2 columns for 30min slots
+                                   return (
+                                     <button
+                                       key={`30-${index}`}
+                                       onClick={() => toggleSlotSelection(slot.id!)}
+                                       className={`p-2 rounded-md border transition-all text-xs ${
+                                         colSpan === 2 ? 'col-span-2' : 'col-span-1'
+                                       } ${
+                                         slot.selected
+                                           ? 'bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500 ring-opacity-50'
+                                           : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 hover:bg-blue-75 dark:hover:bg-blue-900/40'
+                                       }`}
+                                     >
+                                       <div className="font-medium text-blue-800 dark:text-blue-300">
+                                         {slot.start}-{slot.end}
+                                       </div>
+                                       <div className="text-xs opacity-75">30m</div>
+                                     </button>
+                                   );
+                                 })}
                               </div>
                             ) : (
                               <p className="text-xs text-muted-foreground">No 30-min slots available</p>
@@ -105,22 +112,29 @@ export function TimeSlotDisplay({
                           {(() => {
                             const slots60 = daySlots.slots.filter(s => s.id?.startsWith('60-'));
                             return slots60.length > 0 ? (
-                              <div className="grid grid-cols-3 gap-1">
-                                {slots60.map((slot, index) => (
-                                  <button
-                                    key={`60-${index}`}
-                                    onClick={() => toggleSlotSelection(slot.id!)}
-                                    className={`p-2 rounded-md border transition-all text-xs ${
-                                      slot.selected
-                                        ? 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 ring-2 ring-green-500 ring-opacity-50'
-                                        : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-75 dark:hover:bg-green-900/40'
-                                    }`}
-                                  >
-                                    <div className="font-medium text-green-800 dark:text-green-300">
-                                      {slot.start}-{slot.end}
-                                    </div>
-                                  </button>
-                                ))}
+                         <div className="grid grid-cols-6 gap-1">
+                                 {slots60.map((slot, index) => {
+                                   const duration = 60; // 60 minutes  
+                                   const colSpan = Math.min(Math.max(Math.ceil(duration / 15), 2), 4); // 2-4 columns for 60min slots
+                                   return (
+                                     <button
+                                       key={`60-${index}`}
+                                       onClick={() => toggleSlotSelection(slot.id!)}
+                                       className={`p-2 rounded-md border transition-all text-xs ${
+                                         colSpan === 4 ? 'col-span-4' : colSpan === 3 ? 'col-span-3' : 'col-span-2'
+                                       } ${
+                                         slot.selected
+                                           ? 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 ring-2 ring-green-500 ring-opacity-50'
+                                           : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-75 dark:hover:bg-green-900/40'
+                                       }`}
+                                     >
+                                       <div className="font-medium text-green-800 dark:text-green-300">
+                                         {slot.start}-{slot.end}
+                                       </div>
+                                       <div className="text-xs opacity-75">60m</div>
+                                     </button>
+                                   );
+                                 })}
                               </div>
                             ) : (
                               <p className="text-xs text-muted-foreground">No 60-min slots available</p>
@@ -134,23 +148,36 @@ export function TimeSlotDisplay({
                             <p className="text-xs font-medium mb-2 text-red-700 dark:text-red-400">
                               Existing events ({dayEvents.filter(e => !isAllDayEvent(e)).length}):
                             </p>
-                            <div className="grid grid-cols-2 gap-1">
-                              {dayEvents
-                                .filter(event => !isAllDayEvent(event))
-                                .sort((a, b) => a.start.getTime() - b.start.getTime())
-                                .map((event, index) => (
-                                  <div
-                                    key={index}
-                                    className="p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800 text-xs"
-                                  >
-                                    <div className="font-medium text-red-800 dark:text-red-300">
-                                      {format(event.start, 'HH:mm')} - {format(event.end, 'HH:mm')}
-                                    </div>
-                                    <div className="text-red-600 dark:text-red-400 truncate">
-                                      {event.summary}
-                                    </div>
-                                  </div>
-                                ))}
+                             <div className="grid grid-cols-6 gap-1">
+                               {dayEvents
+                                 .filter(event => !isAllDayEvent(event))
+                                 .sort((a, b) => a.start.getTime() - b.start.getTime())
+                                 .map((event, index) => {
+                                   const durationMs = event.end.getTime() - event.start.getTime();
+                                   const durationMinutes = Math.round(durationMs / (1000 * 60));
+                                   const colSpan = Math.min(Math.max(Math.ceil(durationMinutes / 15), 1), 6);
+                                   
+                                   return (
+                                     <div
+                                       key={index}
+                                       className={`p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800 text-xs ${
+                                         colSpan === 6 ? 'col-span-6' : 
+                                         colSpan === 5 ? 'col-span-5' :
+                                         colSpan === 4 ? 'col-span-4' :
+                                         colSpan === 3 ? 'col-span-3' :
+                                         colSpan === 2 ? 'col-span-2' : 'col-span-1'
+                                       }`}
+                                     >
+                                       <div className="font-medium text-red-800 dark:text-red-300">
+                                         {format(event.start, 'HH:mm')} - {format(event.end, 'HH:mm')}
+                                       </div>
+                                       <div className="text-red-600 dark:text-red-400 truncate">
+                                         {event.summary}
+                                       </div>
+                                       <div className="text-xs opacity-75">{durationMinutes}m</div>
+                                     </div>
+                                   );
+                                 })}
                             </div>
                           </div>
                         )}
@@ -209,38 +236,68 @@ export function TimeSlotDisplay({
                         <p className="text-xs font-medium mb-2">
                           Time slots ({daySlots.slots.length} available, {daySlots.slots.filter(s => s.selected).length} selected, {dayEvents.filter(e => !isAllDayEvent(e)).length} busy):
                         </p>
-                        <div className="grid grid-cols-3 gap-1">
-                          {allItems.map((item, index) => (
-                            item.type === 'available' ? (
-                              <button
-                                key={index}
-                                onClick={() => toggleSlotSelection(item.id!)}
-                                className={`p-2 rounded-md border transition-all text-xs ${
-                                  item.selected
-                                    ? 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 ring-2 ring-green-500 ring-opacity-50'
-                                    : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-75 dark:hover:bg-green-900/40'
-                                }`}
-                              >
-                                <div className="font-medium text-green-800 dark:text-green-300">
-                                  {item.start}-{item.end}
-                                </div>
-                              </button>
-                            ) : (
-                              <div
-                                key={index}
-                                className="p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800 text-xs"
-                              >
-                                <div className="font-medium text-red-800 dark:text-red-300">
-                                  {item.start}-{item.end}
-                                </div>
-                                {item.title && (
-                                  <div className="text-red-600 dark:text-red-400 truncate">
-                                    {item.title}
-                                  </div>
-                                )}
-                              </div>
-                            )
-                          ))}
+                         <div className="grid grid-cols-6 gap-1">
+                           {allItems.map((item, index) => {
+                             let durationMinutes = 30; // default
+                             if (item.type === 'available') {
+                               // Calculate duration from time strings
+                               const [startHour, startMin] = item.start.split(':').map(Number);
+                               const [endHour, endMin] = item.end.split(':').map(Number);
+                               durationMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+                             } else {
+                               // Calculate duration from Date objects for busy events
+                               const durationMs = item.startTime.getTime() - item.startTime.getTime();
+                               durationMinutes = Math.round(durationMs / (1000 * 60)) || 
+                                 parseInt(item.end.split(':')[0]) * 60 + parseInt(item.end.split(':')[1]) - 
+                                 (parseInt(item.start.split(':')[0]) * 60 + parseInt(item.start.split(':')[1]));
+                             }
+                             
+                             const colSpan = Math.min(Math.max(Math.ceil(durationMinutes / 15), 1), 6);
+                             
+                             return item.type === 'available' ? (
+                               <button
+                                 key={index}
+                                 onClick={() => toggleSlotSelection(item.id!)}
+                                 className={`p-2 rounded-md border transition-all text-xs ${
+                                   colSpan === 6 ? 'col-span-6' : 
+                                   colSpan === 5 ? 'col-span-5' :
+                                   colSpan === 4 ? 'col-span-4' :
+                                   colSpan === 3 ? 'col-span-3' :
+                                   colSpan === 2 ? 'col-span-2' : 'col-span-1'
+                                 } ${
+                                   item.selected
+                                     ? 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 ring-2 ring-green-500 ring-opacity-50'
+                                     : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-75 dark:hover:bg-green-900/40'
+                                 }`}
+                               >
+                                 <div className="font-medium text-green-800 dark:text-green-300">
+                                   {item.start}-{item.end}
+                                 </div>
+                                 <div className="text-xs opacity-75">{durationMinutes}m</div>
+                               </button>
+                             ) : (
+                               <div
+                                 key={index}
+                                 className={`p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800 text-xs ${
+                                   colSpan === 6 ? 'col-span-6' : 
+                                   colSpan === 5 ? 'col-span-5' :
+                                   colSpan === 4 ? 'col-span-4' :
+                                   colSpan === 3 ? 'col-span-3' :
+                                   colSpan === 2 ? 'col-span-2' : 'col-span-1'
+                                 }`}
+                               >
+                                 <div className="font-medium text-red-800 dark:text-red-300">
+                                   {item.start}-{item.end}
+                                 </div>
+                                 {item.title && (
+                                   <div className="text-red-600 dark:text-red-400 truncate">
+                                     {item.title}
+                                   </div>
+                                 )}
+                                 <div className="text-xs opacity-75">{durationMinutes}m</div>
+                               </div>
+                             );
+                           })}
                         </div>
                       </>
                     );
