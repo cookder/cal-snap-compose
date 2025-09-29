@@ -377,7 +377,3 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
     </Card>
   );
 }
-      </CardContent>
-    </Card>
-  );
-}
