@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, Calendar as CalendarIcon, Clock, CheckCircle, LogOut, LogIn, RefreshCw } from 'lucide-react';
-import { format, isSameDay, isToday, isTomorrow } from 'date-fns';
+import { format, isSameDay, isToday, isTomorrow, startOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import GoogleCalendarOAuthService, { AvailableSlot, CalendarEvent } from '@/services/googleCalendarOAuth';
 import GoogleOAuthService, { OAuthCredentials } from '@/services/googleOAuth';
@@ -290,7 +290,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                   setSelectedDates(dates.sort((a, b) => a.getTime() - b.getTime()));
                 }
               }}
-              disabled={(date) => date < new Date()}
+              disabled={(date) => date < startOfDay(new Date())}
               className="rounded-md border text-xs p-1"
             />
           </div>

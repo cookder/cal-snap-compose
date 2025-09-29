@@ -265,7 +265,7 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
                 setSelectedDates(dates.sort((a, b) => a.getTime() - b.getTime()));
               }
             }}
-            disabled={(date) => date < new Date()}
+            disabled={(date) => date < startOfDay(new Date())}
             className={cn("rounded-md border text-xs p-1 pointer-events-auto")}
           />
         </div>
