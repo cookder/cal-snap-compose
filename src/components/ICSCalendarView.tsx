@@ -336,13 +336,11 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
               }}
               modifiersStyles={{
                 hasEvents: { 
-                  backgroundColor: 'hsl(var(--muted))', 
-                  color: 'hsl(var(--muted-foreground))',
-                  fontWeight: 'normal',
-                  textDecoration: 'underline',
-                  textDecorationColor: 'hsl(var(--primary))',
-                  textDecorationThickness: '2px'
+                  position: 'relative'
                 }
+              }}
+              modifiersClassNames={{
+                hasEvents: 'relative before:absolute before:bottom-0 before:left-1/2 before:transform before:-translate-x-1/2 before:w-1 before:h-1 before:bg-primary before:rounded-full before:content-[""]'
               }}
             />
         </div>
