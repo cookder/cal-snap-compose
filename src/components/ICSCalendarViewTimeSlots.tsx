@@ -171,7 +171,7 @@ export function TimeSlotDisplay({
                                        className={`p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800 text-xs flex flex-col ${heightClass}`}
                                      >
                                        <div className="font-medium text-red-800 dark:text-red-300 leading-tight">
-                                         {format(event.start, 'HH:mm')} - {format(event.end, 'HH:mm')}
+                                         {format(event.start, 'h:mm a')} - {format(event.end, 'h:mm a')}
                                        </div>
                                        <div className="text-red-600 dark:text-red-400 flex-1 py-1 overflow-hidden leading-tight break-words">
                                          {event.summary}
@@ -215,8 +215,8 @@ export function TimeSlotDisplay({
                       .forEach(event => {
                         allItems.push({
                           type: 'busy',
-                          start: format(event.start, 'HH:mm'),
-                          end: format(event.end, 'HH:mm'),
+                           start: format(event.start, 'h:mm a'),
+                           end: format(event.end, 'h:mm a'),
                           startTime: event.start,
                           title: event.summary
                         });

@@ -86,13 +86,13 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
 
           // Only add slot if it's the full duration
           if (slotEnd.getTime() - currentTime.getTime() >= duration * 60 * 1000) {
-            timeSlots.push({
-              start: format(currentTime, 'HH:mm'),
-              end: format(slotEnd, 'HH:mm'),
+             timeSlots.push({
+               start: format(currentTime, 'h:mm a'),
+               end: format(slotEnd, 'h:mm a'),
               startTime: new Date(currentTime),
               endTime: new Date(slotEnd),
               selected: false,
-              id: `${format(selectedDate, 'yyyy-MM-dd')}-${format(currentTime, 'HH:mm')}-${duration}`
+               id: `${format(selectedDate, 'yyyy-MM-dd')}-${format(currentTime, 'h:mm a')}-${duration}`
             });
           }
 
@@ -112,13 +112,13 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
 
         // Only add slot if it's the full duration
         if (slotEnd.getTime() - currentTime.getTime() >= duration * 60 * 1000) {
-          timeSlots.push({
-            start: format(currentTime, 'HH:mm'),
-            end: format(slotEnd, 'HH:mm'),
+           timeSlots.push({
+             start: format(currentTime, 'h:mm a'),
+             end: format(slotEnd, 'h:mm a'),
             startTime: new Date(currentTime),
             endTime: new Date(slotEnd),
             selected: false,
-            id: `${format(selectedDate, 'yyyy-MM-dd')}-${format(currentTime, 'HH:mm')}-${duration}`
+            id: `${format(selectedDate, 'yyyy-MM-dd')}-${format(currentTime, 'h:mm a')}-${duration}`
           });
         }
 
