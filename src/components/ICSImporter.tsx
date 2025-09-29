@@ -122,6 +122,11 @@ export function ICSImporter({ onEventsImported }: ICSImporterProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="bg-muted/50 p-3 rounded-md border-l-4 border-primary/20">
+          <p className="text-sm text-muted-foreground">
+            <strong>Use case:</strong> If you can't connect directly to an outside calendar due to access permissions (within your company or otherwise), feel free to export that ICS file and import it directly here.
+          </p>
+        </div>
         <div>
           <label htmlFor="ics-file" className="block text-sm font-medium mb-2">
             Upload ICS File
