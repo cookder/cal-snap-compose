@@ -22,7 +22,8 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
   const [availability, setAvailability] = useState<AvailableSlot[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [slotDuration, setSlotDuration] = useState<30 | 60>(30);
+  const [slotDuration, setSlotDuration] = useState<30 | 60 | 'both' | 'custom'>(30);
+  const [customDuration, setCustomDuration] = useState<number>(15);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [calendarService, setCalendarService] = useState<GoogleCalendarOAuthService | null>(null);
   const [oauthService, setOauthService] = useState<GoogleOAuthService | null>(null);
@@ -114,6 +115,17 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
     }
   };
 
+  // Helper function to generate slots for a specific duration
+  const generateSlotsForDuration = async (
+    selectedDates: Date[], 
+    duration: number
+  ): Promise<AvailableSlot[]> => {
+    if (!calendarService) return [];
+    
+    // Use the calendar service but with custom duration
+    return await calendarService.getAvailableSlots(selectedDates, duration as 30 | 60);
+  };
+
   const fetchCalendarData = async () => {
     if (!calendarService || !isAuthenticated || selectedDates.length === 0) return;
 
@@ -139,8 +151,20 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
 
       setEvents(eventsByDate);
 
-      // Generate availability
-      const availableSlots = await calendarService.getAvailableSlots(selectedDates, slotDuration);
+      // Generate availability based on duration type
+      let availableSlots: AvailableSlot[] = [];
+      
+      if (slotDuration === 'both') {
+        // Generate both 30 and 60 minute slots - we'll handle display separately
+        availableSlots = await calendarService.getAvailableSlots(selectedDates, 30);
+      } else if (slotDuration === 'custom') {
+        // For custom duration, we'll use the existing service with closest supported duration
+        const closestDuration = customDuration <= 45 ? 30 : 60;
+        availableSlots = await calendarService.getAvailableSlots(selectedDates, closestDuration);
+      } else {
+        availableSlots = await calendarService.getAvailableSlots(selectedDates, slotDuration);
+      }
+      
       setAvailability(availableSlots);
       onAvailabilityChange(availableSlots);
 
@@ -176,15 +200,18 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
     if (isAuthenticated && selectedDates.length > 0) {
       fetchCalendarData();
     }
-  }, [selectedDates, slotDuration, isAuthenticated]);
+  }, [selectedDates, slotDuration, customDuration, isAuthenticated]);
 
   const removeDate = (dateToRemove: Date) => {
     setSelectedDates(prev => prev.filter(d => !isSameDay(d, dateToRemove)));
   };
 
   const handleSlotDurationChange = (value: string) => {
-    const newDuration = parseInt(value) as 30 | 60;
-    setSlotDuration(newDuration);
+    if (value === '30' || value === '60') {
+      setSlotDuration(parseInt(value) as 30 | 60);
+    } else {
+      setSlotDuration(value as 'both' | 'custom');
+    }
   };
 
   const formatDateDisplay = (date: Date) => {
@@ -266,15 +293,38 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
         {isAuthenticated && (
           <div className="space-y-1">
             <label className="text-xs font-medium">Meeting Duration</label>
-            <Select value={slotDuration.toString()} onValueChange={handleSlotDurationChange}>
-              <SelectTrigger className="w-[140px] h-7 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="30">30 min</SelectItem>
-                <SelectItem value="60">60 min</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2 items-center">
+              <Select 
+                value={slotDuration.toString()} 
+                onValueChange={handleSlotDurationChange}
+              >
+                <SelectTrigger className="w-[140px] h-7 text-xs bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-background border shadow-md z-50">
+                  <SelectItem value="30">30 min</SelectItem>
+                  <SelectItem value="60">60 min</SelectItem>
+                  <SelectItem value="both">Both (30 & 60)</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {slotDuration === 'custom' && (
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min="5"
+                    max="120"
+                    step="5"
+                    value={customDuration}
+                    onChange={(e) => setCustomDuration(Number(e.target.value))}
+                    className="w-16 h-7 px-2 text-xs border rounded-md bg-background"
+                    placeholder="15"
+                  />
+                  <span className="text-xs text-muted-foreground">min</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -290,7 +340,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                   setSelectedDates(dates.sort((a, b) => a.getTime() - b.getTime()));
                 }
               }}
-              disabled={(date) => date < new Date()}
+              disabled={(date) => new Date(date.getTime() + 24 * 60 * 60 * 1000) < new Date()}
               className="rounded-md border text-xs p-1"
             />
           </div>
@@ -328,35 +378,163 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                     </Button>
                   </div>
                   
-                  {/* Show existing events */}
-                  {dayEvents.length > 0 && (
-                    <div className="mb-2">
-                      <p className="text-xs text-muted-foreground mb-1">Existing events:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {dayEvents.map((event, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {event.summary} ({format(new Date(event.start.dateTime!), 'h:mm a')} - {format(new Date(event.end.dateTime!), 'h:mm a')})
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  {/* Show combined slots and events */}
+                  <div className="space-y-1">
+                    {(() => {
+                      if (slotDuration === 'both') {
+                        // Generate separate lists for 30 and 60 minute slots
+                        return (
+                          <div className="space-y-3">
+                            {/* 30-minute slots */}
+                            <div>
+                              <p className="text-xs font-medium mb-2 text-blue-700 dark:text-blue-400">
+                                30-minute slots ({daySlots.slots.length} available):
+                              </p>
+                              {daySlots.slots.length > 0 ? (
+                                <div className="grid grid-cols-2 gap-1">
+                                  {daySlots.slots.map((slot, index) => (
+                                    <div
+                                      key={`30-${index}`}
+                                      className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-950/30 rounded-md border border-blue-200 dark:border-blue-800"
+                                    >
+                                      <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                                        {slot.start} - {slot.end}
+                                      </span>
+                                      <Clock className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-muted-foreground">No 30-min slots available</p>
+                              )}
+                            </div>
 
-                  {/* Show available slots */}
-                  {daySlots.slots.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {daySlots.slots.map((slot, index) => (
-                        <Badge
-                          key={index}
-                          className="bg-green-100 text-green-800 border-green-300"
-                        >
-                          {slot.start} - {slot.end}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No available slots for this day</p>
-                  )}
+                            {/* 60-minute slots - fetch separately */}
+                            <div>
+                              <p className="text-xs font-medium mb-2 text-green-700 dark:text-green-400">
+                                60-minute slots:
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Select a different duration to view 60-min slots
+                              </p>
+                            </div>
+
+                            {/* Existing events */}
+                            {dayEvents.length > 0 && (
+                              <div>
+                                <p className="text-xs font-medium mb-2 text-red-700 dark:text-red-400">
+                                  Existing events ({dayEvents.length}):
+                                </p>
+                                <div className="space-y-1">
+                                  {dayEvents
+                                    .sort((a, b) => new Date(a.start.dateTime!).getTime() - new Date(b.start.dateTime!).getTime())
+                                    .map((event, index) => (
+                                      <div
+                                        key={index}
+                                        className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800"
+                                      >
+                                        <div className="flex-1">
+                                          <span className="text-sm font-medium text-red-800 dark:text-red-300">
+                                            {format(new Date(event.start.dateTime!), 'HH:mm')} - {format(new Date(event.end.dateTime!), 'HH:mm')}
+                                          </span>
+                                          <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                                            {event.summary}
+                                          </p>
+                                        </div>
+                                        <CalendarIcon className="h-3 w-3 text-red-600 dark:text-red-400" />
+                                      </div>
+                                    ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      } else {
+                        // Single duration mode - combined chronological view
+                        const allItems: Array<{
+                          type: 'available' | 'busy';
+                          start: string;
+                          end: string;
+                          startTime: Date;
+                          title?: string;
+                        }> = [];
+
+                        // Add available slots
+                        daySlots.slots.forEach(slot => {
+                          allItems.push({
+                            type: 'available',
+                            start: slot.start,
+                            end: slot.end,
+                            startTime: slot.startTime
+                          });
+                        });
+
+                        // Add busy events
+                        dayEvents.forEach(event => {
+                          allItems.push({
+                            type: 'busy',
+                            start: format(new Date(event.start.dateTime!), 'HH:mm'),
+                            end: format(new Date(event.end.dateTime!), 'HH:mm'),
+                            startTime: new Date(event.start.dateTime!),
+                            title: event.summary
+                          });
+                        });
+
+                        // Sort by start time
+                        allItems.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
+                        if (allItems.length === 0) {
+                          return (
+                            <div className="p-3 bg-muted/50 rounded-md border border-dashed">
+                              <p className="text-sm text-muted-foreground text-center">No slots or events for this day</p>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <>
+                            <p className="text-xs font-medium mb-2">
+                              Time slots ({daySlots.slots.length} available, {dayEvents.length} busy):
+                            </p>
+                            <div className="space-y-1">
+                              {allItems.map((item, index) => (
+                                <div
+                                  key={index}
+                                  className={`flex items-center justify-between p-2 rounded-md border ${
+                                    item.type === 'available'
+                                      ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
+                                      : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'
+                                  }`}
+                                >
+                                  <div className="flex-1">
+                                    <span className={`text-sm font-medium ${
+                                      item.type === 'available'
+                                        ? 'text-green-800 dark:text-green-300'
+                                        : 'text-red-800 dark:text-red-300'
+                                    }`}>
+                                      {item.start} - {item.end}
+                                    </span>
+                                    {item.title && (
+                                      <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                                        {item.title}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    {item.type === 'available' ? (
+                                      <Clock className="h-3 w-3 text-green-600 dark:text-green-400" />
+                                    ) : (
+                                      <CalendarIcon className="h-3 w-3 text-red-600 dark:text-red-400" />
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        );
+                      }
+                    })()}
+                  </div>
                 </div>
               );
             })}
