@@ -79,6 +79,30 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
   };
 
 
+  // Toggle all slots for a date
+  const toggleAllSlots = (date: Date, selectAll: boolean) => {
+    setAvailability(prev => {
+      const updated = prev.map(daySlot => 
+        isSameDay(daySlot.date, date) 
+          ? {
+              ...daySlot,
+              slots: daySlot.slots.map(slot => ({ ...slot, selected: selectAll }))
+            }
+          : daySlot
+      );
+      
+      // Update selected slots callback
+      const selectedSlots = updated.map(daySlot => ({
+        date: daySlot.date,
+        slots: daySlot.slots.filter(slot => slot.selected)
+      })).filter(daySlot => daySlot.slots.length > 0);
+      
+      onSelectedSlotsChange(selectedSlots);
+      
+      return updated;
+    });
+  };
+
   // Toggle slot selection
   const toggleSlotSelection = (slotId: string) => {
     setAvailability(prev => {
@@ -196,7 +220,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
             day30Slots.slots.forEach(slot => {
               combinedSlots.push({
                 ...slot,
-                selected: false,
+                selected: true,
                 id: `30-${dateKey}-${slot.start}`
               });
             });
@@ -206,7 +230,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
             day60Slots.slots.forEach(slot => {
               combinedSlots.push({
                 ...slot,
-                selected: false,
+                selected: true,
                 id: `60-${dateKey}-${slot.start}`
               });
             });
@@ -227,7 +251,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
           ...daySlot,
           slots: daySlot.slots.map(slot => ({
             ...slot,
-            selected: false,
+            selected: true,
             id: `custom-${format(daySlot.date, 'yyyy-MM-dd')}-${slot.start}`
           }))
         }));
@@ -237,7 +261,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
           ...daySlot,
           slots: daySlot.slots.map(slot => ({
             ...slot,
-            selected: false,
+            selected: true,
             id: `${slotDuration}-${format(daySlot.date, 'yyyy-MM-dd')}-${slot.start}`
           }))
         }));

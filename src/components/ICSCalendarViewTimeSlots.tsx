@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Clock, CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { AvailableSlot, TimeSlot } from '@/services/googleCalendarOAuth';
@@ -20,6 +21,7 @@ interface TimeSlotDisplayProps {
   isAllDayEvent: (event: CalendarEvent) => boolean;
   generateSlotsForDuration: (date: Date, blockingEvents: CalendarEvent[], duration: number) => TimeSlot[];
   toggleSlotSelection: (slotId: string) => void;
+  toggleAllSlots: (date: Date, selectAll: boolean) => void;
   removeDate: (date: Date) => void;
   formatDateDisplay: (date: Date) => string;
 }
@@ -31,6 +33,7 @@ export function TimeSlotDisplay({
   isAllDayEvent,
   generateSlotsForDuration,
   toggleSlotSelection,
+  toggleAllSlots,
   removeDate,
   formatDateDisplay
 }: TimeSlotDisplayProps) {
@@ -50,14 +53,24 @@ export function TimeSlotDisplay({
                   <Clock className="h-3 w-3" />
                   {formatDateDisplay(daySlots.date)} ({format(daySlots.date, "EEE, MMM d")})
                 </h4>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeDate(daySlots.date)}
-                  className="h-5 px-1 text-xs"
-                >
-                  Remove
-                </Button>
+                <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1">
+                    <Checkbox
+                      checked={daySlots.slots.length > 0 && daySlots.slots.every(slot => slot.selected)}
+                      onCheckedChange={(checked) => toggleAllSlots(daySlots.date, !!checked)}
+                      className="h-3 w-3"
+                    />
+                    <span className="text-xs text-muted-foreground">All</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeDate(daySlots.date)}
+                    className="h-5 px-1 text-xs"
+                  >
+                    Remove
+                  </Button>
+                </div>
               </div>
               
               {/* Show combined slots and events */}
