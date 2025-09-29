@@ -32,11 +32,10 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
 
   // Get events for a specific date
   const getEventsForDate = (date: Date) => {
-    return events.filter(event => 
-      isSameDay(event.start, date) || 
-      isSameDay(event.end, date) ||
-      (date >= startOfDay(event.start) && date <= endOfDay(event.end))
-    );
+    const dayStart = startOfDay(date);
+    const dayEnd = endOfDay(date);
+    // Overlap check with exclusive end: event overlaps the day if it starts before dayEnd and ends after dayStart
+    return events.filter(event => event.start < dayEnd && event.end > dayStart);
   };
 
   // Generate availability for all selected dates
