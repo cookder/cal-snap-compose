@@ -149,19 +149,24 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
 
       // Generate slots based on duration type
       if (slotDuration === 'both') {
-        // Generate both 30 and 60 minute slots
+        // Generate both 30 and 60 minute slots with unique IDs
         const slots30 = generateSlotsForDuration(selectedDate, blockingEvents, 30);
         const slots60 = generateSlotsForDuration(selectedDate, blockingEvents, 60);
         
-        // Merge and sort by start time, remove duplicates
-        const allSlots = [...slots30, ...slots60];
-        allTimeSlots = allSlots
-          .filter((slot, index, arr) => 
-            arr.findIndex(s => s.start === slot.start && s.end === slot.end) === index
-          )
-          .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+        // Add unique prefixes to distinguish between durations
+        slots30.forEach(slot => {
+          slot.id = `30-${slot.id}`;
+        });
+        slots60.forEach(slot => {
+          slot.id = `60-${slot.id}`;
+        });
+        
+        allTimeSlots = [...slots30, ...slots60].sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
       } else if (slotDuration === 'custom') {
         allTimeSlots = generateSlotsForDuration(selectedDate, blockingEvents, customDuration);
+        allTimeSlots.forEach(slot => {
+          slot.id = `custom-${slot.id}`;
+        });
       } else {
         allTimeSlots = generateSlotsForDuration(selectedDate, blockingEvents, slotDuration);
       }
@@ -380,59 +385,65 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
                             {/* 30-minute slots */}
                             <div>
                               <p className="text-xs font-medium mb-2 text-blue-700 dark:text-blue-400">
-                                30-minute slots ({slots30.length} available, {slots30.filter(s => s.selected).length} selected):
+                                30-minute slots ({daySlots.slots.filter(s => s.id?.startsWith('30-')).length} available, {daySlots.slots.filter(s => s.id?.startsWith('30-') && s.selected).length} selected):
                               </p>
-                              {slots30.length > 0 ? (
-                                <div className="grid grid-cols-2 gap-1">
-                                  {slots30.map((slot, index) => (
-                                    <button
-                                      key={`30-${index}`}
-                                      onClick={() => toggleSlotSelection(slot.id!)}
-                                      className={`flex items-center justify-between p-2 rounded-md border transition-all ${
-                                        slot.selected
-                                          ? 'bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500 ring-opacity-50'
-                                          : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 hover:bg-blue-75 dark:hover:bg-blue-900/40'
-                                      }`}
-                                    >
-                                      <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                                        {slot.start} - {slot.end}
-                                      </span>
-                                      <Clock className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                                    </button>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text-xs text-muted-foreground">No 30-min slots available</p>
-                              )}
+                              {(() => {
+                                const slots30 = daySlots.slots.filter(s => s.id?.startsWith('30-'));
+                                return slots30.length > 0 ? (
+                                  <div className="grid grid-cols-2 gap-1">
+                                    {slots30.map((slot, index) => (
+                                      <button
+                                        key={`30-${index}`}
+                                        onClick={() => toggleSlotSelection(slot.id!)}
+                                        className={`flex items-center justify-between p-2 rounded-md border transition-all ${
+                                          slot.selected
+                                            ? 'bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500 ring-opacity-50'
+                                            : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 hover:bg-blue-75 dark:hover:bg-blue-900/40'
+                                        }`}
+                                      >
+                                        <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                                          {slot.start} - {slot.end}
+                                        </span>
+                                        <Clock className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                                      </button>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-muted-foreground">No 30-min slots available</p>
+                                );
+                              })()}
                             </div>
 
                             {/* 60-minute slots */}
                             <div>
                               <p className="text-xs font-medium mb-2 text-green-700 dark:text-green-400">
-                                60-minute slots ({slots60.length} available, {slots60.filter(s => s.selected).length} selected):
+                                60-minute slots ({daySlots.slots.filter(s => s.id?.startsWith('60-')).length} available, {daySlots.slots.filter(s => s.id?.startsWith('60-') && s.selected).length} selected):
                               </p>
-                              {slots60.length > 0 ? (
-                                <div className="grid grid-cols-2 gap-1">
-                                  {slots60.map((slot, index) => (
-                                    <button
-                                      key={`60-${index}`}
-                                      onClick={() => toggleSlotSelection(slot.id!)}
-                                      className={`flex items-center justify-between p-2 rounded-md border transition-all ${
-                                        slot.selected
-                                          ? 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 ring-2 ring-green-500 ring-opacity-50'
-                                          : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-75 dark:hover:bg-green-900/40'
-                                      }`}
-                                    >
-                                      <span className="text-sm font-medium text-green-800 dark:text-green-300">
-                                        {slot.start} - {slot.end}
-                                      </span>
-                                      <Clock className="h-3 w-3 text-green-600 dark:text-green-400" />
-                                    </button>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text-xs text-muted-foreground">No 60-min slots available</p>
-                              )}
+                              {(() => {
+                                const slots60 = daySlots.slots.filter(s => s.id?.startsWith('60-'));
+                                return slots60.length > 0 ? (
+                                  <div className="grid grid-cols-2 gap-1">
+                                    {slots60.map((slot, index) => (
+                                      <button
+                                        key={`60-${index}`}
+                                        onClick={() => toggleSlotSelection(slot.id!)}
+                                        className={`flex items-center justify-between p-2 rounded-md border transition-all ${
+                                          slot.selected
+                                            ? 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 ring-2 ring-green-500 ring-opacity-50'
+                                            : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-75 dark:hover:bg-green-900/40'
+                                        }`}
+                                      >
+                                        <span className="text-sm font-medium text-green-800 dark:text-green-300">
+                                          {slot.start} - {slot.end}
+                                        </span>
+                                        <Clock className="h-3 w-3 text-green-600 dark:text-green-400" />
+                                      </button>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-muted-foreground">No 60-min slots available</p>
+                                );
+                              })()}
                             </div>
 
                             {/* Existing events */}

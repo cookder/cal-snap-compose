@@ -7,12 +7,14 @@ import { Copy, FileText, CheckCircle, Calendar } from "lucide-react";
 import { format, isToday, isTomorrow } from "date-fns";
 import { AvailableSlot } from "@/services/googleCalendarOAuth";
 
+import { TimeSlot } from "@/services/googleCalendarOAuth";
+
 interface GoogleAvailabilityGeneratorProps {
-  availability: AvailableSlot[];
+  selectedSlots: { date: Date; slots: TimeSlot[] }[];
   onTextGenerated: (text: string) => void;
 }
 
-export const GoogleAvailabilityGenerator = ({ availability, onTextGenerated }: GoogleAvailabilityGeneratorProps) => {
+export const GoogleAvailabilityGenerator = ({ selectedSlots, onTextGenerated }: GoogleAvailabilityGeneratorProps) => {
   const [generatedText, setGeneratedText] = useState("");
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
@@ -24,20 +26,20 @@ export const GoogleAvailabilityGenerator = ({ availability, onTextGenerated }: G
   };
 
   const generateAvailabilityText = () => {
-    if (availability.length === 0) return "";
+    if (selectedSlots.length === 0) return "";
 
-    const availabilityWithSlots = availability.filter(item => item.slots.length > 0);
+    const slotsWithData = selectedSlots.filter(item => item.slots.length > 0);
     
-    if (availabilityWithSlots.length === 0) return "";
+    if (slotsWithData.length === 0) return "";
 
     let text = "Here are my available time slots:\n\n";
     
-    availabilityWithSlots.forEach((item, index) => {
+    slotsWithData.forEach((item, index) => {
       text += `${formatDateForText(item.date)}:\n`;
       item.slots.forEach((slot) => {
         text += `• ${slot.start} - ${slot.end}\n`;
       });
-      if (index < availabilityWithSlots.length - 1) {
+      if (index < slotsWithData.length - 1) {
         text += "\n";
       }
     });
@@ -52,7 +54,7 @@ export const GoogleAvailabilityGenerator = ({ availability, onTextGenerated }: G
     setGeneratedText(text);
     onTextGenerated(text);
     setCopied(false);
-  }, [availability, onTextGenerated]);
+  }, [selectedSlots, onTextGenerated]);
 
   const copyToClipboard = async () => {
     if (!generatedText) return;
@@ -74,8 +76,8 @@ export const GoogleAvailabilityGenerator = ({ availability, onTextGenerated }: G
     }
   };
 
-  const totalSlots = availability.reduce((total, day) => total + day.slots.length, 0);
-  const totalDays = availability.filter(day => day.slots.length > 0).length;
+  const totalSlots = selectedSlots.reduce((total, day) => total + day.slots.length, 0);
+  const totalDays = selectedSlots.filter(day => day.slots.length > 0).length;
 
   return (
     <Card className="h-full shadow-md">
@@ -128,8 +130,8 @@ export const GoogleAvailabilityGenerator = ({ availability, onTextGenerated }: G
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center text-muted-foreground">
               <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-              <p className="text-sm">Select dates from your Google Calendar to generate availability text</p>
-              <p className="text-xs mt-2">Available slots will be automatically detected between 9 AM - 5 PM</p>
+              <p className="text-sm">Select specific time slots from your calendar to generate availability text</p>
+              <p className="text-xs mt-2">Click on the green time slots to select them for your email</p>
             </div>
           </div>
         )}

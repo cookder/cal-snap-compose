@@ -253,7 +253,7 @@ const Index = () => {
           <div className="lg:col-span-1">
             <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
               <GoogleAvailabilityGenerator 
-                availability={availability}
+                selectedSlots={selectedSlots}
                 onTextGenerated={setAvailabilityText}
               />
             </Suspense>
