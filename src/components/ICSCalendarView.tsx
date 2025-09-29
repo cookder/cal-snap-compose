@@ -81,8 +81,8 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
           // Only add slot if it's the full duration
           if (slotEnd.getTime() - currentTime.getTime() >= slotDuration * 60 * 1000) {
             timeSlots.push({
-              start: format(currentTime, 'h:mm a'),
-              end: format(slotEnd, 'h:mm a'),
+              start: format(currentTime, 'HH:mm'),
+              end: format(slotEnd, 'HH:mm'),
               startTime: new Date(currentTime),
               endTime: new Date(slotEnd)
             });
@@ -105,8 +105,8 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
         // Only add slot if it's the full duration
         if (slotEnd.getTime() - currentTime.getTime() >= slotDuration * 60 * 1000) {
           timeSlots.push({
-            start: format(currentTime, 'h:mm a'),
-            end: format(slotEnd, 'h:mm a'),
+            start: format(currentTime, 'HH:mm'),
+            end: format(slotEnd, 'HH:mm'),
             startTime: new Date(currentTime),
             endTime: new Date(slotEnd)
           });
@@ -219,6 +219,16 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
             }}
             disabled={(date) => date < new Date()}
             className={cn("rounded-md border text-xs p-1 pointer-events-auto")}
+            modifiers={{
+              hasEvents: events.map(event => startOfDay(event.start))
+            }}
+            modifiersStyles={{
+              hasEvents: { 
+                backgroundColor: 'hsl(var(--primary))', 
+                color: 'hsl(var(--primary-foreground))',
+                fontWeight: 'bold'
+              }
+            }}
           />
         </div>
 
@@ -229,109 +239,52 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
             
             {availability.map((daySlots) => {
               const dayEvents = getEventsForDate(daySlots.date);
-              
-              // Create a combined timeline of events and available slots
-              const timeline: Array<{
-                type: 'event' | 'slot';
-                start: string;
-                end: string;
-                startTime: Date;
-                endTime: Date;
-                title?: string;
-                data?: any;
-              }> = [];
-
-              // Add events to timeline
-              dayEvents.forEach(event => {
-                timeline.push({
-                  type: 'event',
-                  start: format(event.start, 'h:mm a'),
-                  end: format(event.end, 'h:mm a'),
-                  startTime: event.start,
-                  endTime: event.end,
-                  title: event.summary,
-                  data: event
-                });
-              });
-
-              // Add available slots to timeline
-              daySlots.slots.forEach(slot => {
-                timeline.push({
-                  type: 'slot',
-                  start: format(slot.startTime, 'h:mm a'),
-                  end: format(slot.endTime, 'h:mm a'),
-                  startTime: slot.startTime,
-                  endTime: slot.endTime
-                });
-              });
-
-              // Sort timeline by start time
-              timeline.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-
               return (
-                <div key={daySlots.date.toISOString()} className="border rounded-lg p-3 bg-muted/20">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-medium flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
+                <div key={daySlots.date.toISOString()} className="space-y-1 border-b border-border pb-1 mb-1">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-medium flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
                       {formatDateDisplay(daySlots.date)} ({format(daySlots.date, "EEE, MMM d")})
                     </h4>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => removeDate(daySlots.date)}
-                      className="h-6 px-2 text-xs"
+                      className="h-5 px-1 text-xs"
                     >
                       Remove
                     </Button>
                   </div>
                   
-                  {/* Timeline View */}
-                  <div className="space-y-1">
-                    {timeline.length > 0 ? (
-                      timeline.map((item, index) => (
-                        <div
-                          key={index}
-                          className={cn(
-                            "flex items-center justify-between p-2 rounded-md",
-                            item.type === 'event' 
-                              ? "bg-red-50 border border-red-200" 
-                              : "bg-green-50 border border-green-200"
-                          )}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className={cn(
-                              "w-2 h-2 rounded-full",
-                              item.type === 'event' ? "bg-red-400" : "bg-green-400"
-                            )} />
-                            <span className="text-sm font-medium">
-                              {item.start} - {item.end}
-                            </span>
-                            {item.type === 'event' && item.title && (
-                              <span className="text-xs text-muted-foreground">
-                                • {item.title}
-                              </span>
-                            )}
-                          </div>
-                          <Badge 
-                            variant={item.type === 'event' ? "destructive" : "default"}
-                            className={cn(
-                              "text-xs",
-                              item.type === 'event' 
-                                ? "bg-red-100 text-red-800 border-red-300" 
-                                : "bg-green-100 text-green-800 border-green-300"
-                            )}
-                          >
-                            {item.type === 'event' ? 'Busy' : 'Available'}
+                  {/* Show existing events */}
+                  {dayEvents.length > 0 && (
+                    <div className="mb-2">
+                      <p className="text-xs text-muted-foreground mb-1">Existing events:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {dayEvents.map((event, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {event.summary} ({format(event.start, 'h:mm a')} - {format(event.end, 'h:mm a')})
                           </Badge>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No events or available slots for this day</p>
+                        ))}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
+
+                  {/* Show available slots */}
+                  {daySlots.slots.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {daySlots.slots.map((slot, index) => (
+                        <Badge
+                          key={index}
+                          className="bg-green-100 text-green-800 border-green-300"
+                        >
+                          {slot.start} - {slot.end}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No available slots for this day</p>
+                  )}
                 </div>
               );
             })}
