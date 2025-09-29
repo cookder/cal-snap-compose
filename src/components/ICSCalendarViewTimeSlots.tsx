@@ -83,20 +83,23 @@ export function TimeSlotDisplay({
                                                      duration <= 60 ? 'h-32' : 
                                                      duration <= 90 ? 'h-48' : 'h-64';
                                    return (
-                                     <button
-                                       key={`30-${index}`}
-                                       onClick={() => toggleSlotSelection(slot.id!)}
-                                       className={`p-2 rounded-md border transition-all text-xs flex flex-col justify-between ${heightClass} ${
-                                         slot.selected
-                                           ? 'bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500 ring-opacity-50'
-                                           : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 hover:bg-blue-75 dark:hover:bg-blue-900/40'
-                                       }`}
-                                     >
-                                       <div className="font-medium text-blue-800 dark:text-blue-300">
-                                         {slot.start}-{slot.end}
-                                       </div>
-                                       <div className="text-xs opacity-75">30m</div>
-                                     </button>
+                                      <button
+                                        key={`30-${index}`}
+                                        onClick={() => toggleSlotSelection(slot.id!)}
+                                        className={`p-1 rounded-md border transition-all text-xs flex flex-col justify-between ${heightClass} ${
+                                          slot.selected
+                                            ? 'bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500 ring-opacity-50'
+                                            : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 hover:bg-blue-75 dark:hover:bg-blue-900/40'
+                                        }`}
+                                      >
+                                        <div className="font-medium text-blue-800 dark:text-blue-300 text-[10px] leading-tight text-center">
+                                          {slot.start}
+                                        </div>
+                                        <div className="font-medium text-blue-800 dark:text-blue-300 text-[10px] leading-tight text-center">
+                                          {slot.end}
+                                        </div>
+                                        <div className="text-[10px] opacity-75">30m</div>
+                                      </button>
                                    );
                                  })}
                               </div>
@@ -123,20 +126,23 @@ export function TimeSlotDisplay({
                                                      duration <= 60 ? 'h-32' : 
                                                      duration <= 90 ? 'h-48' : 'h-64';
                                    return (
-                                     <button
-                                       key={`60-${index}`}
-                                       onClick={() => toggleSlotSelection(slot.id!)}
-                                       className={`p-2 rounded-md border transition-all text-xs flex flex-col justify-between ${heightClass} ${
-                                         slot.selected
-                                           ? 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 ring-2 ring-green-500 ring-opacity-50'
-                                           : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-75 dark:hover:bg-green-900/40'
-                                       }`}
-                                     >
-                                       <div className="font-medium text-green-800 dark:text-green-300">
-                                         {slot.start}-{slot.end}
-                                       </div>
-                                       <div className="text-xs opacity-75">60m</div>
-                                     </button>
+                                      <button
+                                        key={`60-${index}`}
+                                        onClick={() => toggleSlotSelection(slot.id!)}
+                                        className={`p-1 rounded-md border transition-all text-xs flex flex-col justify-between ${heightClass} ${
+                                          slot.selected
+                                            ? 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 ring-2 ring-green-500 ring-opacity-50'
+                                            : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-75 dark:hover:bg-green-900/40'
+                                        }`}
+                                      >
+                                        <div className="font-medium text-green-800 dark:text-green-300 text-[10px] leading-tight text-center">
+                                          {slot.start}
+                                        </div>
+                                        <div className="font-medium text-green-800 dark:text-green-300 text-[10px] leading-tight text-center">
+                                          {slot.end}
+                                        </div>
+                                        <div className="text-[10px] opacity-75">60m</div>
+                                      </button>
                                    );
                                  })}
                               </div>
@@ -166,18 +172,21 @@ export function TimeSlotDisplay({
                                                      durationMinutes <= 90 ? 'h-48' : 'h-64';
                                    
                                    return (
-                                     <div
-                                       key={index}
-                                       className={`p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800 text-xs flex flex-col ${heightClass}`}
-                                     >
-                                       <div className="font-medium text-red-800 dark:text-red-300 leading-tight">
-                                         {format(event.start, 'HH:mm')} - {format(event.end, 'HH:mm')}
-                                       </div>
-                                       <div className="text-red-600 dark:text-red-400 flex-1 py-1 overflow-hidden leading-tight break-words">
-                                         {event.summary}
-                                       </div>
-                                       <div className="text-xs opacity-75 mt-auto">{durationMinutes}m</div>
-                                     </div>
+                                      <div
+                                        key={index}
+                                        className={`p-1 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800 text-xs flex flex-col ${heightClass}`}
+                                      >
+                                        <div className="font-medium text-red-800 dark:text-red-300 text-[10px] leading-tight text-center">
+                                          {format(event.start, 'h:mm a')}
+                                        </div>
+                                        <div className="font-medium text-red-800 dark:text-red-300 text-[10px] leading-tight text-center">
+                                          {format(event.end, 'h:mm a')}
+                                        </div>
+                                        <div className="text-red-600 dark:text-red-400 flex-1 py-1 overflow-hidden leading-tight break-words text-[10px]">
+                                          {event.summary}
+                                        </div>
+                                        <div className="text-[10px] opacity-75 mt-auto">{durationMinutes}m</div>
+                                      </div>
                                    );
                                  })}
                             </div>
@@ -315,35 +324,41 @@ export function TimeSlotDisplay({
                                                durationMinutes <= 90 ? 'h-48' : 'h-64';
                              
                              return item.type === 'available' ? (
-                               <button
-                                 key={index}
-                                 onClick={() => toggleSlotSelection(item.id!)}
-                                 className={`p-2 rounded-md border transition-all text-xs flex flex-col justify-between ${heightClass} ${
-                                   item.selected
-                                     ? 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 ring-2 ring-green-500 ring-opacity-50'
-                                     : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-75 dark:hover:bg-green-900/40'
-                                 }`}
-                               >
-                                 <div className="font-medium text-green-800 dark:text-green-300">
-                                   {item.start}-{item.end}
-                                 </div>
-                                 <div className="text-xs opacity-75">{durationMinutes}m</div>
-                               </button>
+                                <button
+                                  key={index}
+                                  onClick={() => toggleSlotSelection(item.id!)}
+                                  className={`p-1 rounded-md border transition-all text-xs flex flex-col justify-between ${heightClass} ${
+                                    item.selected
+                                      ? 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 ring-2 ring-green-500 ring-opacity-50'
+                                      : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-75 dark:hover:bg-green-900/40'
+                                  }`}
+                                >
+                                  <div className="font-medium text-green-800 dark:text-green-300 text-[10px] leading-tight text-center">
+                                    {item.start}
+                                  </div>
+                                  <div className="font-medium text-green-800 dark:text-green-300 text-[10px] leading-tight text-center">
+                                    {item.end}
+                                  </div>
+                                  <div className="text-[10px] opacity-75">{durationMinutes}m</div>
+                                </button>
                              ) : (
-                               <div
-                                 key={index}
-                                 className={`p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800 text-xs flex flex-col ${heightClass}`}
-                               >
-                                 <div className="font-medium text-red-800 dark:text-red-300 leading-tight">
-                                   {item.start}-{item.end}
-                                 </div>
-                                 {item.title && (
-                                   <div className="text-red-600 dark:text-red-400 flex-1 py-1 overflow-hidden leading-tight break-words">
-                                     {item.title}
-                                   </div>
-                                 )}
-                                 <div className="text-xs opacity-75 mt-auto">{durationMinutes}m</div>
-                               </div>
+                                <div
+                                  key={index}
+                                  className={`p-1 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800 text-xs flex flex-col ${heightClass}`}
+                                >
+                                  <div className="font-medium text-red-800 dark:text-red-300 text-[10px] leading-tight text-center">
+                                    {item.start}
+                                  </div>
+                                  <div className="font-medium text-red-800 dark:text-red-300 text-[10px] leading-tight text-center">
+                                    {item.end}
+                                  </div>
+                                  {item.title && (
+                                    <div className="text-red-600 dark:text-red-400 flex-1 py-1 overflow-hidden leading-tight break-words text-[10px]">
+                                      {item.title}
+                                    </div>
+                                  )}
+                                  <div className="text-[10px] opacity-75 mt-auto">{durationMinutes}m</div>
+                                </div>
                              );
                             })}
                           </div>
