@@ -154,20 +154,24 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
       } else {
         newSelected.add(slotId);
       }
-      
-      // Update availability with only selected slots
+      return newSelected;
+    });
+  };
+
+  // Update availability callback when selection changes
+  useEffect(() => {
+    if (availability.length > 0) {
       const filteredAvailability = availability.map(daySlots => ({
         ...daySlots,
         slots: daySlots.slots.filter(s => {
           const id = getSlotId(daySlots.date, s);
-          return newSelected.has(id);
+          return selectedSlots.has(id);
         })
       })).filter(daySlots => daySlots.slots.length > 0);
       
       onAvailabilityChange(filteredAvailability);
-      return newSelected;
-    });
-  };
+    }
+  }, [selectedSlots, availability, onAvailabilityChange]);
 
   // Auto-generate availability when dates or slot duration changes
   useEffect(() => {
