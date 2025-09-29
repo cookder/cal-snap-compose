@@ -269,45 +269,96 @@ export function ICSCalendarView({ events, onAvailabilityChange, onClearEvents }:
                     </Button>
                   </div>
                   
-                  {/* Show existing events */}
-                  {dayEvents.length > 0 && (
-                    <div className="mb-2">
-                      <p className="text-xs text-muted-foreground mb-1">Existing events:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {dayEvents.map((event, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {event.summary} ({format(event.start, 'h:mm a')} - {format(event.end, 'h:mm a')})
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
 
-                  {/* Show available slots */}
-                  {daySlots.slots.length > 0 ? (
-                    <div className="space-y-1">
-                      <p className="text-xs font-medium text-green-700 dark:text-green-400 mb-2">
-                        Available slots ({daySlots.slots.length}):
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {daySlots.slots.map((slot, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-950/30 rounded-md border border-green-200 dark:border-green-800"
-                          >
-                            <span className="text-sm font-medium text-green-800 dark:text-green-300">
-                              {slot.start} - {slot.end}
-                            </span>
-                            <Clock className="h-3 w-3 text-green-600 dark:text-green-400" />
+                  {/* Show combined slots and events in chronological order */}
+                  <div className="space-y-1">
+                    {(() => {
+                      const dayEvents = getEventsForDate(daySlots.date);
+                      const allItems: Array<{
+                        type: 'available' | 'busy';
+                        start: string;
+                        end: string;
+                        startTime: Date;
+                        title?: string;
+                      }> = [];
+
+                      // Add available slots
+                      daySlots.slots.forEach(slot => {
+                        allItems.push({
+                          type: 'available',
+                          start: slot.start,
+                          end: slot.end,
+                          startTime: slot.startTime
+                        });
+                      });
+
+                      // Add busy events (excluding all-day events)
+                      dayEvents
+                        .filter(event => !isAllDayEvent(event))
+                        .forEach(event => {
+                          allItems.push({
+                            type: 'busy',
+                            start: format(event.start, 'HH:mm'),
+                            end: format(event.end, 'HH:mm'),
+                            startTime: event.start,
+                            title: event.summary
+                          });
+                        });
+
+                      // Sort by start time
+                      allItems.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
+                      if (allItems.length === 0) {
+                        return (
+                          <div className="p-3 bg-muted/50 rounded-md border border-dashed">
+                            <p className="text-sm text-muted-foreground text-center">No slots or events for this day</p>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-3 bg-muted/50 rounded-md border border-dashed">
-                      <p className="text-sm text-muted-foreground text-center">No available slots for this day</p>
-                    </div>
-                  )}
+                        );
+                      }
+
+                      return (
+                        <>
+                          <p className="text-xs font-medium mb-2">
+                            Time slots ({daySlots.slots.length} available, {dayEvents.filter(e => !isAllDayEvent(e)).length} busy):
+                          </p>
+                          <div className="space-y-1">
+                            {allItems.map((item, index) => (
+                              <div
+                                key={index}
+                                className={`flex items-center justify-between p-2 rounded-md border ${
+                                  item.type === 'available'
+                                    ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
+                                    : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'
+                                }`}
+                              >
+                                <div className="flex-1">
+                                  <span className={`text-sm font-medium ${
+                                    item.type === 'available'
+                                      ? 'text-green-800 dark:text-green-300'
+                                      : 'text-red-800 dark:text-red-300'
+                                  }`}>
+                                    {item.start} - {item.end}
+                                  </span>
+                                  {item.title && (
+                                    <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                                      {item.title}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  {item.type === 'available' ? (
+                                    <Clock className="h-3 w-3 text-green-600 dark:text-green-400" />
+                                  ) : (
+                                    <CalendarIcon className="h-3 w-3 text-red-600 dark:text-red-400" />
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
               );
             })}
