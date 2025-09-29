@@ -321,27 +321,30 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
         {/* Calendar */}
         <div className="space-y-1">
           <label className="text-xs font-medium">Select Available Dates</label>
-          <Calendar
-            mode="multiple"
-            selected={selectedDates}
-            onSelect={(dates) => {
-              if (dates) {
-                setSelectedDates(dates.sort((a, b) => a.getTime() - b.getTime()));
-              }
-            }}
-            disabled={(date) => startOfDay(date) < startOfDay(new Date())}
-            className={cn("rounded-md border text-xs p-1 pointer-events-auto")}
-            modifiers={{
-              hasEvents: events.map(event => startOfDay(event.start))
-            }}
-            modifiersStyles={{
-              hasEvents: { 
-                backgroundColor: 'hsl(var(--primary))', 
-                color: 'hsl(var(--primary-foreground))',
-                fontWeight: 'bold'
-              }
-            }}
-          />
+            <Calendar
+              mode="multiple"
+              selected={selectedDates}
+              onSelect={(dates) => {
+                if (dates) {
+                  setSelectedDates(dates.sort((a, b) => a.getTime() - b.getTime()));
+                }
+              }}
+              disabled={(date) => startOfDay(date) < startOfDay(new Date())}
+              className={cn("rounded-md border text-xs p-1 pointer-events-auto")}
+              modifiers={{
+                hasEvents: events.map(event => startOfDay(event.start))
+              }}
+              modifiersStyles={{
+                hasEvents: { 
+                  backgroundColor: 'hsl(var(--muted))', 
+                  color: 'hsl(var(--muted-foreground))',
+                  fontWeight: 'normal',
+                  textDecoration: 'underline',
+                  textDecorationColor: 'hsl(var(--primary))',
+                  textDecorationThickness: '2px'
+                }
+              }}
+            />
         </div>
 
         {/* Available Slots Display */}
