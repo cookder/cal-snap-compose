@@ -310,6 +310,14 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
   useEffect(() => {
     if (isAuthenticated && selectedDates.length > 0) {
       fetchCalendarData();
+    } else {
+      // If there are no selected dates or the user is not authenticated,
+      // clear any previously computed availability and selected slots. Without
+      // this the parent components may display stale availability from a
+      // previous selection.
+      setAvailability([]);
+      onAvailabilityChange([]);
+      onSelectedSlotsChange([]);
     }
   }, [selectedDates, selectedDurations, customDuration, isAuthenticated]);
 

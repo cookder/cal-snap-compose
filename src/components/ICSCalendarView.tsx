@@ -130,9 +130,17 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
 
   // Generate availability for all selected dates
   const generateAvailability = () => {
+    // When no dates are selected we should clear all state.
+    // Without this the parent component may continue to display stale slots
+    // from a previous selection, because onSelectedSlotsChange is never invoked
+    // when there are no selected dates.
     if (selectedDates.length === 0) {
+      // Clear local availability state
       setAvailability([]);
+      // Inform parent that there are no available slots
       onAvailabilityChange([]);
+      // Also clear any previously selected slots to avoid stale selections
+      onSelectedSlotsChange([]);
       return;
     }
 
