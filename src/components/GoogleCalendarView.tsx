@@ -25,8 +25,8 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
   const [availability, setAvailability] = useState<AvailableSlot[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [slotDuration, setSlotDuration] = useState<15 | 30 | 60 | 'both' | 'custom' | 'grouped'>('both');
-  const [customDuration, setCustomDuration] = useState<number>(15);
+  const [selectedDurations, setSelectedDurations] = useState<Set<15 | 30 | 60 | 'custom' | 'grouped'>>(new Set([30, 60]));
+  const [customDuration, setCustomDuration] = useState<number>(45);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [calendarService, setCalendarService] = useState<GoogleCalendarOAuthService | null>(null);
   const [oauthService, setOauthService] = useState<GoogleOAuthService | null>(null);
@@ -176,14 +176,21 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
 
       setEvents(eventsByDate);
 
-      // Generate availability based on duration type
+      // Generate availability based on selected durations
       let availableSlots: AvailableSlot[] = [];
+      const allSlotsByDate = new Map<string, TimeSlot[]>();
       
-      if (slotDuration === 'grouped') {
+      // Initialize map for each selected date
+      selectedDates.forEach(date => {
+        allSlotsByDate.set(format(date, 'yyyy-MM-dd'), []);
+      });
+      
+      if (selectedDurations.has('grouped')) {
         // Generate 30-minute base slots and group consecutive ones
         const baseSlots = await calendarService.getAvailableSlots(selectedDates, 30);
         
-        availableSlots = baseSlots.map(daySlot => {
+        baseSlots.forEach(daySlot => {
+          const dateKey = format(daySlot.date, 'yyyy-MM-dd');
           const slots = daySlot.slots;
           const groupedSlots: TimeSlot[] = [];
           let i = 0;
@@ -209,80 +216,57 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
               startTime: currentSlot.startTime,
               endTime: endSlot.endTime,
               selected: true,
-              id: `grouped-${format(daySlot.date, 'yyyy-MM-dd')}-${format(currentSlot.startTime, 'HH:mm')}-${durationMinutes}`
+              id: `grouped-${dateKey}-${format(currentSlot.startTime, 'HH:mm')}-${durationMinutes}`
             });
             
             i = j;
           }
           
-          return {
-            date: daySlot.date,
-            slots: groupedSlots
-          };
+          allSlotsByDate.get(dateKey)?.push(...groupedSlots);
         });
-      } else if (slotDuration === 'both') {
-        // Generate both 30 and 60 minute slots with unique IDs
-        const slots30 = await calendarService.getAvailableSlots(selectedDates, 30);
-        const slots60 = await calendarService.getAvailableSlots(selectedDates, 60);
-        
-        // Combine slots with unique prefixes
-        availableSlots = selectedDates.map(date => {
-          const dateKey = format(date, 'yyyy-MM-dd');
-          const day30Slots = slots30.find(day => format(day.date, 'yyyy-MM-dd') === dateKey);
-          const day60Slots = slots60.find(day => format(day.date, 'yyyy-MM-dd') === dateKey);
-          
-          const combinedSlots: TimeSlot[] = [];
-          
-          if (day30Slots) {
-            day30Slots.slots.forEach(slot => {
-              combinedSlots.push({
-                ...slot,
-                selected: true,
-                id: `30-${dateKey}-${slot.start}`
-              });
-            });
-          }
-          
-          if (day60Slots) {
-            day60Slots.slots.forEach(slot => {
-              combinedSlots.push({
-                ...slot,
-                selected: true,
-                id: `60-${dateKey}-${slot.start}`
-              });
-            });
-          }
-          
-          combinedSlots.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-          
-          return {
-            date,
-            slots: combinedSlots
-          };
-        });
-      } else if (slotDuration === 'custom') {
-        // For custom duration, use closest supported duration
-        const closestDuration = customDuration <= 45 ? 30 : 60;
-        const baseSlots = await calendarService.getAvailableSlots(selectedDates, closestDuration);
-        availableSlots = baseSlots.map(daySlot => ({
-          ...daySlot,
-          slots: daySlot.slots.map(slot => ({
-            ...slot,
-            selected: true,
-            id: `custom-${format(daySlot.date, 'yyyy-MM-dd')}-${slot.start}`
-          }))
-        }));
-      } else {
-        const baseSlots = await calendarService.getAvailableSlots(selectedDates, slotDuration as 15 | 30 | 60);
-        availableSlots = baseSlots.map(daySlot => ({
-          ...daySlot,
-          slots: daySlot.slots.map(slot => ({
-            ...slot,
-            selected: true,
-            id: `${slotDuration}-${format(daySlot.date, 'yyyy-MM-dd')}-${slot.start}`
-          }))
-        }));
       }
+      
+      // Generate slots for standard durations (15, 30, 60)
+      const standardDurations = [15, 30, 60].filter(d => selectedDurations.has(d as 15 | 30 | 60));
+      for (const duration of standardDurations) {
+        const slots = await calendarService.getAvailableSlots(selectedDates, duration as 15 | 30 | 60);
+        slots.forEach(daySlot => {
+          const dateKey = format(daySlot.date, 'yyyy-MM-dd');
+          const slotsWithIds = daySlot.slots.map(slot => ({
+            ...slot,
+            selected: true,
+            id: `${duration}-${dateKey}-${slot.start}`
+          }));
+          allSlotsByDate.get(dateKey)?.push(...slotsWithIds);
+        });
+      }
+      
+      // Generate custom duration slots
+      if (selectedDurations.has('custom') && customDuration > 0) {
+        const closestDuration = customDuration <= 22 ? 15 : customDuration <= 45 ? 30 : 60;
+        const baseSlots = await calendarService.getAvailableSlots(selectedDates, closestDuration);
+        baseSlots.forEach(daySlot => {
+          const dateKey = format(daySlot.date, 'yyyy-MM-dd');
+          const slotsWithIds = daySlot.slots.map(slot => ({
+            ...slot,
+            selected: true,
+            id: `custom-${dateKey}-${slot.start}`
+          }));
+          allSlotsByDate.get(dateKey)?.push(...slotsWithIds);
+        });
+      }
+      
+      // Convert map back to availableSlots array
+      selectedDates.forEach(date => {
+        const dateKey = format(date, 'yyyy-MM-dd');
+        const slots = allSlotsByDate.get(dateKey) || [];
+        // Sort slots by start time
+        slots.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+        availableSlots.push({
+          date,
+          slots
+        });
+      });
       
       setAvailability(availableSlots);
       onAvailabilityChange(availableSlots);
@@ -327,18 +311,23 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
     if (isAuthenticated && selectedDates.length > 0) {
       fetchCalendarData();
     }
-  }, [selectedDates, slotDuration, customDuration, isAuthenticated]);
+  }, [selectedDates, selectedDurations, customDuration, isAuthenticated]);
 
   const removeDate = (dateToRemove: Date) => {
     setSelectedDates(prev => prev.filter(d => !isSameDay(d, dateToRemove)));
   };
 
-  const handleSlotDurationChange = (value: string) => {
-    if (value === '15' || value === '30' || value === '60') {
-      setSlotDuration(parseInt(value) as 15 | 30 | 60);
-    } else {
-      setSlotDuration(value as 'both' | 'custom' | 'grouped');
-    }
+  // Handle duration checkbox toggle
+  const toggleDuration = (duration: 15 | 30 | 60 | 'custom' | 'grouped') => {
+    setSelectedDurations(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(duration)) {
+        newSet.delete(duration);
+      } else {
+        newSet.add(duration);
+      }
+      return newSet;
+    });
   };
 
   const formatDateDisplay = (date: Date) => {
@@ -430,41 +419,71 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
 
         {/* Slot Duration Selection */}
         {isAuthenticated && (
-          <div className="space-y-1">
-            <label className="text-xs font-medium">Meeting Duration</label>
-            <div className="flex gap-2 items-center">
-              <Select 
-                value={slotDuration.toString()} 
-                onValueChange={handleSlotDurationChange}
-              >
-                <SelectTrigger className="w-[140px] h-7 text-xs bg-background">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-background border shadow-md z-50">
-                  <SelectItem value="15">15 min</SelectItem>
-                  <SelectItem value="30">30 min</SelectItem>
-                  <SelectItem value="60">60 min</SelectItem>
-                  <SelectItem value="both">Both (30 & 60)</SelectItem>
-                  <SelectItem value="grouped">Grouped Chunks</SelectItem>
-                  <SelectItem value="custom">Custom</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              {slotDuration === 'custom' && (
-                <div className="flex items-center gap-1">
+          <div className="space-y-2">
+            <label className="text-xs font-medium">Meeting Durations</label>
+            <div className="space-y-2 p-2 border rounded-md bg-background">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedDurations.has(15)}
+                  onChange={() => toggleDuration(15)}
+                  className="h-3.5 w-3.5 rounded"
+                />
+                <span className="text-xs">15 minutes</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedDurations.has(30)}
+                  onChange={() => toggleDuration(30)}
+                  className="h-3.5 w-3.5 rounded"
+                />
+                <span className="text-xs">30 minutes</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedDurations.has(60)}
+                  onChange={() => toggleDuration(60)}
+                  className="h-3.5 w-3.5 rounded"
+                />
+                <span className="text-xs">60 minutes</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedDurations.has('grouped')}
+                  onChange={() => toggleDuration('grouped')}
+                  className="h-3.5 w-3.5 rounded"
+                />
+                <span className="text-xs">Grouped Chunks</span>
+              </label>
+              <div className="space-y-1">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input
-                    type="number"
-                    min="5"
-                    max="120"
-                    step="5"
-                    value={customDuration}
-                    onChange={(e) => setCustomDuration(Number(e.target.value))}
-                    className="w-16 h-7 px-2 text-xs border rounded-md bg-background"
-                    placeholder="15"
+                    type="checkbox"
+                    checked={selectedDurations.has('custom')}
+                    onChange={() => toggleDuration('custom')}
+                    className="h-3.5 w-3.5 rounded"
                   />
-                  <span className="text-xs text-muted-foreground">min</span>
-                </div>
-              )}
+                  <span className="text-xs">Custom Duration</span>
+                </label>
+                {selectedDurations.has('custom') && (
+                  <div className="flex items-center gap-1 ml-5">
+                    <input
+                      type="number"
+                      min="5"
+                      max="120"
+                      step="5"
+                      value={customDuration}
+                      onChange={(e) => setCustomDuration(Number(e.target.value))}
+                      className="w-16 h-6 px-2 text-xs border rounded-md bg-background"
+                      placeholder="45"
+                    />
+                    <span className="text-xs text-muted-foreground">min</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -522,16 +541,23 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                   {/* Show combined slots and events */}
                   <div className="space-y-1">
                     {(() => {
-                      if (slotDuration === 'grouped') {
-                        // Grouped mode - show consolidated time chunks
-                        return (
-                          <div className="space-y-2">
-                            <p className="text-xs font-medium mb-2 text-purple-700 dark:text-purple-400">
-                              Grouped time chunks ({daySlots.slots.length} available, {daySlots.slots.filter(s => s.selected).length} selected):
-                            </p>
-                            {daySlots.slots.length > 0 ? (
+                      // Unified view - show all slots grouped by type
+                      const groupedSlots = daySlots.slots.filter(s => s.id?.startsWith('grouped-'));
+                      const slots15 = daySlots.slots.filter(s => s.id?.startsWith('15-'));
+                      const slots30 = daySlots.slots.filter(s => s.id?.startsWith('30-'));
+                      const slots60 = daySlots.slots.filter(s => s.id?.startsWith('60-'));
+                      const customSlots = daySlots.slots.filter(s => s.id?.startsWith('custom-'));
+                      
+                      return (
+                        <div className="space-y-3">
+                          {/* Grouped chunks */}
+                          {groupedSlots.length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium mb-2 text-purple-700 dark:text-purple-400">
+                                Grouped chunks ({groupedSlots.length} available, {groupedSlots.filter(s => s.selected).length} selected):
+                              </p>
                               <div className="flex flex-col gap-1">
-                                {daySlots.slots.map((slot, index) => {
+                                {groupedSlots.map((slot, index) => {
                                   const durationMinutes = (slot.endTime.getTime() - slot.startTime.getTime()) / (1000 * 60);
                                   const hours = Math.floor(durationMinutes / 60);
                                   const mins = durationMinutes % 60;
@@ -562,229 +588,147 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                                   );
                                 })}
                               </div>
-                            ) : (
-                              <p className="text-xs text-muted-foreground">No grouped slots available</p>
-                            )}
-                            
-                            {/* Existing events */}
-                            {dayEvents.length > 0 && (
-                              <div className="pt-1">
-                                <p className="text-xs font-medium mb-2 text-red-700 dark:text-red-400">
-                                  Existing events ({dayEvents.length}):
-                                </p>
-                                <div className="space-y-1">
-                                  {dayEvents
-                                    .sort((a, b) => new Date(a.start.dateTime!).getTime() - new Date(b.start.dateTime!).getTime())
-                                    .map((event, index) => (
-                                      <div
-                                        key={index}
-                                        className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800"
-                                      >
-                                        <div className="flex-1">
-                                          <span className="text-sm font-medium text-red-800 dark:text-red-300">
-                                            {format(new Date(event.start.dateTime!), 'HH:mm')} - {format(new Date(event.end.dateTime!), 'HH:mm')}
-                                          </span>
-                                          <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
-                                            {event.summary}
-                                          </p>
-                                        </div>
-                                        <CalendarIcon className="h-3 w-3 text-red-600 dark:text-red-400" />
-                                      </div>
-                                    ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      } else if (slotDuration === 'both') {
-                        // Generate separate lists for 30 and 60 minute slots
-                        return (
-                          <div className="space-y-3">
-                            {/* 30-minute slots */}
+                            </div>
+                          )}
+                          
+                          {/* 15-minute slots */}
+                          {slots15.length > 0 && (
                             <div>
-                              <p className="text-xs font-medium mb-2 text-blue-700 dark:text-blue-400">
-                                30-minute slots ({daySlots.slots.filter(s => s.id?.startsWith('30-')).length} available, {daySlots.slots.filter(s => s.id?.startsWith('30-') && s.selected).length} selected):
+                              <p className="text-xs font-medium mb-2 text-amber-700 dark:text-amber-400">
+                                15-minute slots ({slots15.length} available, {slots15.filter(s => s.selected).length} selected):
                               </p>
-                              {(() => {
-                                const slots30 = daySlots.slots.filter(s => s.id?.startsWith('30-'));
-                                return slots30.length > 0 ? (
-                                  <div className="flex flex-col gap-1">
-                                    {slots30.map((slot, index) => (
-                                      <button
-                                        key={`30-${index}`}
-                                        onClick={() => toggleSlotSelection(slot.id!)}
-                                        className={`w-full flex items-center justify-between p-2 rounded-md border transition-all ${
-                                          slot.selected
-                                            ? 'bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500 ring-opacity-50'
-                                            : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 hover:bg-blue-75 dark:hover:bg-blue-900/40'
-                                        }`}
-                                      >
-                                        <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                                          {slot.start} - {slot.end}
-                                        </span>
-                                        <Clock className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                                      </button>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <p className="text-xs text-muted-foreground">No 30-min slots available</p>
-                                );
-                              })()}
-                            </div>
-
-                            {/* 60-minute slots */}
-                            <div>
-                              <p className="text-xs font-medium mb-2 text-green-700 dark:text-green-400">
-                                60-minute slots ({daySlots.slots.filter(s => s.id?.startsWith('60-')).length} available, {daySlots.slots.filter(s => s.id?.startsWith('60-') && s.selected).length} selected):
-                              </p>
-                              {(() => {
-                                const slots60 = daySlots.slots.filter(s => s.id?.startsWith('60-'));
-                                return slots60.length > 0 ? (
-                                  <div className="flex flex-col gap-1">
-                                    {slots60.map((slot, index) => (
-                                      <button
-                                        key={`60-${index}`}
-                                        onClick={() => toggleSlotSelection(slot.id!)}
-                                        className={`w-full flex items-center justify-between p-2 rounded-md border transition-all ${
-                                          slot.selected
-                                            ? 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 ring-2 ring-green-500 ring-opacity-50'
-                                            : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-75 dark:hover:bg-green-900/40'
-                                        }`}
-                                      >
-                                        <span className="text-sm font-medium text-green-800 dark:text-green-300">
-                                          {slot.start} - {slot.end}
-                                        </span>
-                                        <Clock className="h-3 w-3 text-green-600 dark:text-green-400" />
-                                      </button>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <p className="text-xs text-muted-foreground">No 60-min slots available</p>
-                                );
-                              })()}
-                            </div>
-
-                            {/* Existing events */}
-                            {dayEvents.length > 0 && (
-                              <div>
-                                <p className="text-xs font-medium mb-2 text-red-700 dark:text-red-400">
-                                  Existing events ({dayEvents.length}):
-                                </p>
-                                <div className="space-y-1">
-                                  {dayEvents
-                                    .sort((a, b) => new Date(a.start.dateTime!).getTime() - new Date(b.start.dateTime!).getTime())
-                                    .map((event, index) => (
-                                      <div
-                                        key={index}
-                                        className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800"
-                                      >
-                                        <div className="flex-1">
-                                          <span className="text-sm font-medium text-red-800 dark:text-red-300">
-                                            {format(new Date(event.start.dateTime!), 'HH:mm')} - {format(new Date(event.end.dateTime!), 'HH:mm')}
-                                          </span>
-                                          <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
-                                            {event.summary}
-                                          </p>
-                                        </div>
-                                        <CalendarIcon className="h-3 w-3 text-red-600 dark:text-red-400" />
-                                      </div>
-                                    ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      } else {
-                        // Single duration mode - combined chronological view
-                        const allItems: Array<{
-                          type: 'available' | 'busy';
-                          start: string;
-                          end: string;
-                          startTime: Date;
-                          title?: string;
-                          selected?: boolean;
-                          id?: string;
-                        }> = [];
-
-                        // Add available slots
-                        daySlots.slots.forEach(slot => {
-                          allItems.push({
-                            type: 'available',
-                            start: slot.start,
-                            end: slot.end,
-                            startTime: slot.startTime,
-                            selected: slot.selected,
-                            id: slot.id
-                          });
-                        });
-
-                        // Add busy events
-                        dayEvents.forEach(event => {
-                          allItems.push({
-                            type: 'busy',
-                            start: format(new Date(event.start.dateTime!), 'HH:mm'),
-                            end: format(new Date(event.end.dateTime!), 'HH:mm'),
-                            startTime: new Date(event.start.dateTime!),
-                            title: event.summary
-                          });
-                        });
-
-                        // Sort by start time
-                        allItems.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-
-                        if (allItems.length === 0) {
-                          return (
-                            <div className="p-3 bg-muted/50 rounded-md border border-dashed">
-                              <p className="text-sm text-muted-foreground text-center">No slots or events for this day</p>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <>
-                            <p className="text-xs font-medium mb-2">
-                              Time slots ({daySlots.slots.length} available, {daySlots.slots.filter(s => s.selected).length} selected, {dayEvents.length} busy):
-                            </p>
-                            <div className="space-y-1">
-                              {allItems.map((item, index) => (
-                                item.type === 'available' ? (
+                              <div className="flex flex-col gap-1">
+                                {slots15.map((slot, index) => (
                                   <button
                                     key={index}
-                                    onClick={() => toggleSlotSelection(item.id!)}
+                                    onClick={() => toggleSlotSelection(slot.id!)}
                                     className={`w-full flex items-center justify-between p-2 rounded-md border transition-all ${
-                                      item.selected
+                                      slot.selected
+                                        ? 'bg-amber-100 dark:bg-amber-900/50 border-amber-300 dark:border-amber-700 ring-2 ring-amber-500 ring-opacity-50'
+                                        : 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 hover:bg-amber-75 dark:hover:bg-amber-900/40'
+                                    }`}
+                                  >
+                                    <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                                      {slot.start} - {slot.end}
+                                    </span>
+                                    <Clock className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 30-minute slots */}
+                          {slots30.length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium mb-2 text-blue-700 dark:text-blue-400">
+                                30-minute slots ({slots30.length} available, {slots30.filter(s => s.selected).length} selected):
+                              </p>
+                              <div className="flex flex-col gap-1">
+                                {slots30.map((slot, index) => (
+                                  <button
+                                    key={index}
+                                    onClick={() => toggleSlotSelection(slot.id!)}
+                                    className={`w-full flex items-center justify-between p-2 rounded-md border transition-all ${
+                                      slot.selected
+                                        ? 'bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500 ring-opacity-50'
+                                        : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 hover:bg-blue-75 dark:hover:bg-blue-900/40'
+                                    }`}
+                                  >
+                                    <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                                      {slot.start} - {slot.end}
+                                    </span>
+                                    <Clock className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 60-minute slots */}
+                          {slots60.length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium mb-2 text-green-700 dark:text-green-400">
+                                60-minute slots ({slots60.length} available, {slots60.filter(s => s.selected).length} selected):
+                              </p>
+                              <div className="flex flex-col gap-1">
+                                {slots60.map((slot, index) => (
+                                  <button
+                                    key={index}
+                                    onClick={() => toggleSlotSelection(slot.id!)}
+                                    className={`w-full flex items-center justify-between p-2 rounded-md border transition-all ${
+                                      slot.selected
                                         ? 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 ring-2 ring-green-500 ring-opacity-50'
                                         : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-75 dark:hover:bg-green-900/40'
                                     }`}
                                   >
                                     <span className="text-sm font-medium text-green-800 dark:text-green-300">
-                                      {item.start} - {item.end}
+                                      {slot.start} - {slot.end}
                                     </span>
                                     <Clock className="h-3 w-3 text-green-600 dark:text-green-400" />
                                   </button>
-                                ) : (
-                                  <div
-                                    key={index}
-                                    className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800"
-                                  >
-                                    <div className="flex-1">
-                                      <span className="text-sm font-medium text-red-800 dark:text-red-300">
-                                        {item.start} - {item.end}
-                                      </span>
-                                      {item.title && (
-                                        <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
-                                          {item.title}
-                                        </p>
-                                      )}
-                                    </div>
-                                    <CalendarIcon className="h-3 w-3 text-red-600 dark:text-red-400" />
-                                  </div>
-                                )
-                              ))}
+                                ))}
+                              </div>
                             </div>
-                          </>
-                        );
-                      }
+                          )}
+                          
+                          {/* Custom duration slots */}
+                          {customSlots.length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium mb-2 text-indigo-700 dark:text-indigo-400">
+                                Custom ({customDuration} min) slots ({customSlots.length} available, {customSlots.filter(s => s.selected).length} selected):
+                              </p>
+                              <div className="flex flex-col gap-1">
+                                {customSlots.map((slot, index) => (
+                                  <button
+                                    key={index}
+                                    onClick={() => toggleSlotSelection(slot.id!)}
+                                    className={`w-full flex items-center justify-between p-2 rounded-md border transition-all ${
+                                      slot.selected
+                                        ? 'bg-indigo-100 dark:bg-indigo-900/50 border-indigo-300 dark:border-indigo-700 ring-2 ring-indigo-500 ring-opacity-50'
+                                        : 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-75 dark:hover:bg-indigo-900/40'
+                                    }`}
+                                  >
+                                    <span className="text-sm font-medium text-indigo-800 dark:text-indigo-300">
+                                      {slot.start} - {slot.end}
+                                    </span>
+                                    <Clock className="h-3 w-3 text-indigo-600 dark:text-indigo-400" />
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Existing events */}
+                          {dayEvents.length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium mb-2 text-red-700 dark:text-red-400">
+                                Existing events ({dayEvents.length}):
+                              </p>
+                              <div className="space-y-1">
+                                {dayEvents
+                                  .sort((a, b) => new Date(a.start.dateTime!).getTime() - new Date(b.start.dateTime!).getTime())
+                                  .map((event, index) => (
+                                    <div
+                                      key={index}
+                                      className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800"
+                                    >
+                                      <div className="flex-1">
+                                        <span className="text-sm font-medium text-red-800 dark:text-red-300">
+                                          {format(new Date(event.start.dateTime!), 'HH:mm')} - {format(new Date(event.end.dateTime!), 'HH:mm')}
+                                        </span>
+                                        <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                                          {event.summary}
+                                        </p>
+                                      </div>
+                                      <CalendarIcon className="h-3 w-3 text-red-600 dark:text-red-400" />
+                                    </div>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
                     })()}
                   </div>
                 </div>

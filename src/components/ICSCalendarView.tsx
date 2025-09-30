@@ -30,8 +30,8 @@ interface ICSCalendarViewProps {
 
 export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsChange, onClearEvents, onTogglePanel, showToggle }: ICSCalendarViewProps) {
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
-  const [slotDuration, setSlotDuration] = useState<15 | 30 | 60 | 'both' | 'custom' | 'grouped'>('both');
-  const [customDuration, setCustomDuration] = useState<number>(15);
+  const [selectedDurations, setSelectedDurations] = useState<Set<15 | 30 | 60 | 'custom' | 'grouped'>>(new Set([30, 60]));
+  const [customDuration, setCustomDuration] = useState<number>(45);
   const [availability, setAvailability] = useState<AvailableSlot[]>([]);
   // Helper: detect all-day events (00:00 to 00:00 next day or longer)
   const isAllDayEvent = (event: CalendarEvent) => {
@@ -150,8 +150,8 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
 
       let allTimeSlots: TimeSlot[] = [];
 
-      // Generate slots based on duration type
-      if (slotDuration === 'grouped') {
+      // Generate slots based on selected durations
+      if (selectedDurations.has('grouped')) {
         // Generate 30-minute base slots first
         const baseSlots = generateSlotsForDuration(selectedDate, blockingEvents, 30);
         
@@ -186,29 +186,30 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
           i = j;
         }
         
-        allTimeSlots = groupedSlots;
-      } else if (slotDuration === 'both') {
-        // Generate both 30 and 60 minute slots with unique IDs
-        const slots30 = generateSlotsForDuration(selectedDate, blockingEvents, 30);
-        const slots60 = generateSlotsForDuration(selectedDate, blockingEvents, 60);
-        
-        // Add unique prefixes to distinguish between durations
-        slots30.forEach(slot => {
-          slot.id = `30-${slot.id}`;
+        allTimeSlots = [...allTimeSlots, ...groupedSlots];
+      }
+      
+      // Generate slots for standard durations (15, 30, 60)
+      const standardDurations = [15, 30, 60].filter(d => selectedDurations.has(d as 15 | 30 | 60));
+      for (const duration of standardDurations) {
+        const slots = generateSlotsForDuration(selectedDate, blockingEvents, duration);
+        slots.forEach(slot => {
+          slot.id = `${duration}-${slot.id}`;
         });
-        slots60.forEach(slot => {
-          slot.id = `60-${slot.id}`;
-        });
-        
-        allTimeSlots = [...slots30, ...slots60].sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-      } else if (slotDuration === 'custom') {
-        allTimeSlots = generateSlotsForDuration(selectedDate, blockingEvents, customDuration);
-        allTimeSlots.forEach(slot => {
+        allTimeSlots = [...allTimeSlots, ...slots];
+      }
+      
+      // Generate custom duration slots
+      if (selectedDurations.has('custom') && customDuration > 0) {
+        const customSlots = generateSlotsForDuration(selectedDate, blockingEvents, customDuration);
+        customSlots.forEach(slot => {
           slot.id = `custom-${slot.id}`;
         });
-      } else {
-        allTimeSlots = generateSlotsForDuration(selectedDate, blockingEvents, slotDuration);
+        allTimeSlots = [...allTimeSlots, ...customSlots];
       }
+      
+      // Sort all slots by start time
+      allTimeSlots.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
       availableSlots.push({
         date: selectedDate,
@@ -253,20 +254,24 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
   // Auto-generate availability when dates or slot duration changes
   useEffect(() => {
     generateAvailability();
-  }, [selectedDates, slotDuration, customDuration, events]);
+  }, [selectedDates, selectedDurations, customDuration, events]);
 
   // Remove a selected date
   const removeDate = (dateToRemove: Date) => {
     setSelectedDates(prev => prev.filter(d => !isSameDay(d, dateToRemove)));
   };
 
-  // Handle slot duration change
-  const handleSlotDurationChange = (value: string) => {
-    if (value === '15' || value === '30' || value === '60') {
-      setSlotDuration(parseInt(value) as 15 | 30 | 60);
-    } else {
-      setSlotDuration(value as 'both' | 'custom' | 'grouped');
-    }
+  // Handle duration checkbox toggle
+  const toggleDuration = (duration: 15 | 30 | 60 | 'custom' | 'grouped') => {
+    setSelectedDurations(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(duration)) {
+        newSet.delete(duration);
+      } else {
+        newSet.add(duration);
+      }
+      return newSet;
+    });
   };
 
   // Format date for display
@@ -333,41 +338,71 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
       </CardHeader>
       <CardContent className="space-y-2 pt-2">
         {/* Slot Duration Selection */}
-        <div className="space-y-1">
-          <label className="text-xs font-medium">Meeting Duration</label>
-          <div className="flex gap-2 items-center">
-            <Select 
-              value={slotDuration.toString()} 
-              onValueChange={handleSlotDurationChange}
-            >
-              <SelectTrigger className="w-[140px] h-7 text-xs bg-background">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-background border shadow-md z-50">
-                <SelectItem value="15">15 min</SelectItem>
-                <SelectItem value="30">30 min</SelectItem>
-                <SelectItem value="60">60 min</SelectItem>
-                <SelectItem value="both">Both (30 & 60)</SelectItem>
-                <SelectItem value="grouped">Grouped Chunks</SelectItem>
-                <SelectItem value="custom">Custom</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            {slotDuration === 'custom' && (
-              <div className="flex items-center gap-1">
+        <div className="space-y-2">
+          <label className="text-xs font-medium">Meeting Durations</label>
+          <div className="space-y-2 p-2 border rounded-md bg-background">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedDurations.has(15)}
+                onChange={() => toggleDuration(15)}
+                className="h-3.5 w-3.5 rounded"
+              />
+              <span className="text-xs">15 minutes</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedDurations.has(30)}
+                onChange={() => toggleDuration(30)}
+                className="h-3.5 w-3.5 rounded"
+              />
+              <span className="text-xs">30 minutes</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedDurations.has(60)}
+                onChange={() => toggleDuration(60)}
+                className="h-3.5 w-3.5 rounded"
+              />
+              <span className="text-xs">60 minutes</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedDurations.has('grouped')}
+                onChange={() => toggleDuration('grouped')}
+                className="h-3.5 w-3.5 rounded"
+              />
+              <span className="text-xs">Grouped Chunks</span>
+            </label>
+            <div className="space-y-1">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
-                  type="number"
-                  min="5"
-                  max="120"
-                  step="5"
-                  value={customDuration}
-                  onChange={(e) => setCustomDuration(Number(e.target.value))}
-                  className="w-16 h-7 px-2 text-xs border rounded-md bg-background"
-                  placeholder="15"
+                  type="checkbox"
+                  checked={selectedDurations.has('custom')}
+                  onChange={() => toggleDuration('custom')}
+                  className="h-3.5 w-3.5 rounded"
                 />
-                <span className="text-xs text-muted-foreground">min</span>
-              </div>
-            )}
+                <span className="text-xs">Custom Duration</span>
+              </label>
+              {selectedDurations.has('custom') && (
+                <div className="flex items-center gap-1 ml-5">
+                  <input
+                    type="number"
+                    min="5"
+                    max="120"
+                    step="5"
+                    value={customDuration}
+                    onChange={(e) => setCustomDuration(Number(e.target.value))}
+                    className="w-16 h-6 px-2 text-xs border rounded-md bg-background"
+                    placeholder="45"
+                  />
+                  <span className="text-xs text-muted-foreground">min</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -402,7 +437,7 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
         {selectedDates.length > 0 && (
           <TimeSlotDisplay
             availability={availability}
-            slotDuration={slotDuration}
+            slotDuration="mixed"
             getEventsForDate={getEventsForDate}
             isAllDayEvent={isAllDayEvent}
             generateSlotsForDuration={generateSlotsForDuration}
