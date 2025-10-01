@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -151,14 +151,13 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
     return await calendarService.getAvailableSlots(selectedDates, duration as 15 | 30 | 60);
   };
 
-  const fetchCalendarData = async () => {
+  const fetchCalendarData = useCallback(async () => {
     if (!calendarService || !isAuthenticated || selectedDates.length === 0) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      // Fetch events for selected dates
       const eventsByDate: { [key: string]: CalendarEvent[] } = {};
       
       for (const date of selectedDates) {
@@ -176,17 +175,15 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
 
       setEvents(eventsByDate);
 
-      // Generate availability based on selected durations
+      // Generate availability
       let availableSlots: AvailableSlot[] = [];
       const allSlotsByDate = new Map<string, TimeSlot[]>();
       
-      // Initialize map for each selected date
       selectedDates.forEach(date => {
         allSlotsByDate.set(format(date, 'yyyy-MM-dd'), []);
       });
       
       if (selectedDurations.has('grouped')) {
-        // Generate 30-minute base slots and group consecutive ones
         const baseSlots = await calendarService.getAvailableSlots(selectedDates, 30);
         
         baseSlots.forEach(daySlot => {
@@ -200,16 +197,13 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
             let endSlot = currentSlot;
             let j = i + 1;
             
-            // Find consecutive slots
             while (j < slots.length && slots[j].startTime.getTime() === endSlot.endTime.getTime()) {
               endSlot = slots[j];
               j++;
             }
             
-            // Calculate duration in minutes
             const durationMinutes = (endSlot.endTime.getTime() - currentSlot.startTime.getTime()) / (1000 * 60);
             
-            // Create grouped slot
             groupedSlots.push({
               start: currentSlot.start,
               end: endSlot.end,
@@ -226,7 +220,6 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
         });
       }
       
-      // Generate slots for standard durations (15, 30, 60)
       const standardDurations = [15, 30, 60].filter(d => selectedDurations.has(d as 15 | 30 | 60));
       for (const duration of standardDurations) {
         const slots = await calendarService.getAvailableSlots(selectedDates, duration as 15 | 30 | 60);
@@ -241,7 +234,6 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
         });
       }
       
-      // Generate custom duration slots
       if (selectedDurations.has('custom') && customDuration > 0) {
         const closestDuration = customDuration <= 22 ? 15 : customDuration <= 45 ? 30 : 60;
         const baseSlots = await calendarService.getAvailableSlots(selectedDates, closestDuration);
@@ -256,11 +248,9 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
         });
       }
       
-      // Convert map back to availableSlots array
       selectedDates.forEach(date => {
         const dateKey = format(date, 'yyyy-MM-dd');
         const slots = allSlotsByDate.get(dateKey) || [];
-        // Sort slots by start time
         slots.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
         availableSlots.push({
           date,
@@ -271,7 +261,6 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
       setAvailability(availableSlots);
       onAvailabilityChange(availableSlots);
 
-      // Update selected slots callback
       const selectedSlots = availableSlots.map(daySlot => ({
         date: daySlot.date,
         slots: daySlot.slots.filter(slot => slot.selected)
@@ -305,21 +294,17 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
     } finally {
       setLoading(false);
     }
-  };
+  }, [calendarService, isAuthenticated, selectedDates, selectedDurations, customDuration, onAvailabilityChange, onSelectedSlotsChange, toast]);
 
   useEffect(() => {
     if (isAuthenticated && selectedDates.length > 0) {
       fetchCalendarData();
     } else {
-      // If there are no selected dates or the user is not authenticated,
-      // clear any previously computed availability and selected slots. Without
-      // this the parent components may display stale availability from a
-      // previous selection.
       setAvailability([]);
       onAvailabilityChange([]);
       onSelectedSlotsChange([]);
     }
-  }, [selectedDates, selectedDurations, customDuration, isAuthenticated]);
+  }, [isAuthenticated, selectedDates, selectedDurations, customDuration, fetchCalendarData, onAvailabilityChange, onSelectedSlotsChange]);
 
   const removeDate = (dateToRemove: Date) => {
     setSelectedDates(prev => prev.filter(d => !isSameDay(d, dateToRemove)));
