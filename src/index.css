@@ -117,3 +117,85 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  /* Larger touch targets for mobile */
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Calendar improvements */
+  .calendar-container {
+    font-size: 0.875rem;
+  }
+
+  /* Time slot buttons */
+  .time-slot-button {
+    min-height: 48px;
+    font-size: 0.875rem;
+    padding: 0.75rem;
+  }
+
+  /* Reduce padding on mobile */
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Stack cards vertically on mobile */
+  .lg\:grid-cols-5 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Make text readable */
+  body {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  /* Improve form inputs */
+  input, textarea, select {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  /* Better scrolling */
+  .overflow-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .lg\:grid-cols-5 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .lg\:col-span-3 {
+    grid-column: span 2;
+  }
+}
+
+/* Improve touch interactions */
+@media (hover: none) and (pointer: coarse) {
+  /* Remove hover effects on touch devices */
+  button:hover, a:hover {
+    background-color: initial;
+  }
+
+  /* Add active states instead */
+  button:active, a:active {
+    transform: scale(0.98);
+    transition: transform 0.1s;
+  }
+}
+
+/* Safe area for notched devices */
+@supports (padding-top: env(safe-area-inset-top)) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
