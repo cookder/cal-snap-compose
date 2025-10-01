@@ -8,8 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { AlertCircle, Calendar as CalendarIcon, Clock, CheckCircle, LogOut, LogIn, RefreshCw } from 'lucide-react';
 import { format, isSameDay, isToday, isTomorrow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import GoogleCalendarOAuthService, { AvailableSlot, CalendarEvent, TimeSlot } from '@/services/googleCalendarOAuth';
+import GoogleCalendarOAuthService, { AvailableSlot, CalendarEvent, TimeSlot, GoogleCalendarInfo } from '@/services/googleCalendarOAuth';
 import GoogleOAuthService, { OAuthCredentials } from '@/services/googleOAuth';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronDown } from 'lucide-react';
 
 interface GoogleCalendarViewProps {
   onAvailabilityChange: (availability: AvailableSlot[]) => void;
@@ -32,6 +35,10 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [calendarService, setCalendarService] = useState<GoogleCalendarOAuthService | null>(null);
   const [oauthService, setOauthService] = useState<GoogleOAuthService | null>(null);
+  const [availableCalendars, setAvailableCalendars] = useState<GoogleCalendarInfo[]>([]);
+  const [selectedCalendars, setSelectedCalendars] = useState<string[]>([]);
+  const [loadingCalendars, setLoadingCalendars] = useState(false);
+  const [showCalendarSelector, setShowCalendarSelector] = useState(false);
   const { toast } = useToast();
 
   // Add cache with 5 minute expiration
@@ -100,11 +107,60 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
   const checkAuthStatus = async (oauth: GoogleOAuthService) => {
     try {
       const accessToken = await oauth.getValidAccessToken();
-      setIsAuthenticated(!!accessToken);
+      const authenticated = !!accessToken;
+      setIsAuthenticated(authenticated);
+      
+      // Fetch calendar list if authenticated
+      if (authenticated && calendarService) {
+        fetchCalendarList();
+      }
     } catch (error) {
       console.error('Error checking auth status:', error);
       setIsAuthenticated(false);
     }
+  };
+
+  const fetchCalendarList = async () => {
+    if (!calendarService) return;
+    
+    setLoadingCalendars(true);
+    try {
+      const calendars = await calendarService.getCalendarList();
+      setAvailableCalendars(calendars);
+      
+      // Auto-select primary calendar
+      const primaryCalendar = calendars.find(cal => cal.primary);
+      if (primaryCalendar) {
+        setSelectedCalendars([primaryCalendar.id]);
+      }
+    } catch (error) {
+      console.error('Error fetching calendar list:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch calendar list.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingCalendars(false);
+    }
+  };
+
+  const toggleCalendar = (calendarId: string) => {
+    setSelectedCalendars(prev => {
+      if (prev.includes(calendarId)) {
+        return prev.filter(id => id !== calendarId);
+      } else {
+        return [...prev, calendarId];
+      }
+    });
+  };
+
+  const selectAllCalendars = () => {
+    setSelectedCalendars(availableCalendars.map(cal => cal.id));
+  };
+
+  const deselectAllCalendars = () => {
+    setSelectedCalendars([]);
   };
 
 
@@ -219,8 +275,11 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
   ): Promise<AvailableSlot[]> => {
     if (!calendarService) return [];
     
-    // Use the calendar service but with custom duration
-    return await calendarService.getAvailableSlots(selectedDates, duration as 15 | 30 | 60);
+    // Use selected calendars or default to primary
+    const calendarsToUse = selectedCalendars.length > 0 ? selectedCalendars : 'primary';
+    
+    // Use the calendar service but with custom duration and selected calendars
+    return await calendarService.getAvailableSlots(selectedDates, duration as 15 | 30 | 60, undefined, calendarsToUse);
   };
 
   const fetchCalendarData = useCallback(async () => {
@@ -231,24 +290,26 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
 
     try {
       const eventsByDate: { [key: string]: CalendarEvent[] } = {};
+      const calendarsToUse = selectedCalendars.length > 0 ? selectedCalendars : ['primary'];
       
       for (const date of selectedDates) {
         const dateKey = format(date, 'yyyy-MM-dd');
         
-        // Check cache first
-        const cachedEvents = eventCache.get(dateKey);
+        // Check cache first (now includes calendar IDs in key)
+        const cacheKey = `${dateKey}-${calendarsToUse.join(',')}`;
+        const cachedEvents = eventCache.get(cacheKey);
         if (cachedEvents) {
-          console.log(`Using cached events for ${dateKey}`);
+          console.log(`Using cached events for ${dateKey} from ${calendarsToUse.length} calendar(s)`);
           eventsByDate[dateKey] = cachedEvents;
         } else {
           try {
-            console.log(`Fetching events for ${dateKey}`);
-            const dayEvents = await calendarService.getCalendarEvents('primary', date, date);
+            console.log(`Fetching events for ${dateKey} from ${calendarsToUse.length} calendar(s)`);
+            const dayEvents = await calendarService.getCalendarEvents(calendarsToUse, date, date);
             const filteredEvents = dayEvents.filter(event => 
               event.start.dateTime && event.end.dateTime && event.status !== 'cancelled'
             );
             
-            eventCache.set(dateKey, filteredEvents);
+            eventCache.set(cacheKey, filteredEvents);
             eventsByDate[dateKey] = filteredEvents;
           } catch (error) {
             console.error(`Error fetching events for ${dateKey}:`, error);
@@ -268,7 +329,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
       });
       
       if (selectedDurations.has('grouped')) {
-        const baseSlots = await calendarService.getAvailableSlots(selectedDates, 30);
+        const baseSlots = await calendarService.getAvailableSlots(selectedDates, 30, undefined, calendarsToUse);
         
         baseSlots.forEach(daySlot => {
           const dateKey = format(daySlot.date, 'yyyy-MM-dd');
@@ -306,7 +367,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
       
       const standardDurations = [15, 30, 60].filter(d => selectedDurations.has(d as 15 | 30 | 60));
       for (const duration of standardDurations) {
-        const slots = await calendarService.getAvailableSlots(selectedDates, duration as 15 | 30 | 60);
+        const slots = await calendarService.getAvailableSlots(selectedDates, duration as 15 | 30 | 60, undefined, calendarsToUse);
         slots.forEach(daySlot => {
           const dateKey = format(daySlot.date, 'yyyy-MM-dd');
           const slotsWithIds = daySlot.slots.map(slot => ({
@@ -320,7 +381,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
       
       if (selectedDurations.has('custom') && customDuration > 0) {
         const closestDuration = customDuration <= 22 ? 15 : customDuration <= 45 ? 30 : 60;
-        const baseSlots = await calendarService.getAvailableSlots(selectedDates, closestDuration);
+        const baseSlots = await calendarService.getAvailableSlots(selectedDates, closestDuration, undefined, calendarsToUse);
         baseSlots.forEach(daySlot => {
           const dateKey = format(daySlot.date, 'yyyy-MM-dd');
           const slotsWithIds = daySlot.slots.map(slot => ({
@@ -378,7 +439,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
     } finally {
       setLoading(false);
     }
-  }, [calendarService, isAuthenticated, selectedDates, selectedDurations, customDuration, eventCache, onAvailabilityChange, onSelectedSlotsChange, toast]);
+  }, [calendarService, isAuthenticated, selectedDates, selectedDurations, customDuration, selectedCalendars, eventCache, onAvailabilityChange, onSelectedSlotsChange, toast]);
 
   useEffect(() => {
     if (!isAuthenticated || selectedDates.length === 0) {
@@ -397,7 +458,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [isAuthenticated, selectedDates, selectedDurations, customDuration, fetchCalendarData, onAvailabilityChange, onSelectedSlotsChange]);
+  }, [isAuthenticated, selectedDates, selectedDurations, customDuration, selectedCalendars, fetchCalendarData, onAvailabilityChange, onSelectedSlotsChange]);
 
   const removeDate = (dateToRemove: Date) => {
     setSelectedDates(prev => prev.filter(d => !isSameDay(d, dateToRemove)));
@@ -494,6 +555,80 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
             </Button>
           )}
         </div>
+
+        {/* Calendar Selector */}
+        {isAuthenticated && availableCalendars.length > 0 && (
+          <Collapsible open={showCalendarSelector} onOpenChange={setShowCalendarSelector}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" size="sm" className="w-full h-8 text-xs justify-between">
+                <span className="flex items-center gap-1">
+                  <CalendarIcon className="h-3 w-3" />
+                  {selectedCalendars.length === 0 
+                    ? 'Select Calendars' 
+                    : `${selectedCalendars.length} Calendar${selectedCalendars.length > 1 ? 's' : ''} Selected`}
+                </span>
+                <ChevronDown className={`h-3 w-3 transition-transform ${showCalendarSelector ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2 space-y-2">
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={selectAllCalendars}
+                  className="h-6 text-xs flex-1"
+                  disabled={selectedCalendars.length === availableCalendars.length}
+                >
+                  Select All
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={deselectAllCalendars}
+                  className="h-6 text-xs flex-1"
+                  disabled={selectedCalendars.length === 0}
+                >
+                  Deselect All
+                </Button>
+              </div>
+              <div className="space-y-1 max-h-48 overflow-y-auto border rounded-md p-2">
+                {availableCalendars.map(calendar => (
+                  <div 
+                    key={calendar.id}
+                    className="flex items-center space-x-2 p-1.5 hover:bg-muted rounded cursor-pointer"
+                    onClick={() => toggleCalendar(calendar.id)}
+                  >
+                    <Checkbox 
+                      id={`calendar-${calendar.id}`}
+                      checked={selectedCalendars.includes(calendar.id)}
+                      onCheckedChange={() => toggleCalendar(calendar.id)}
+                    />
+                    <label 
+                      htmlFor={`calendar-${calendar.id}`}
+                      className="flex-1 text-xs cursor-pointer flex items-center gap-2"
+                    >
+                      {calendar.backgroundColor && (
+                        <div 
+                          className="w-3 h-3 rounded-full border border-border" 
+                          style={{ backgroundColor: calendar.backgroundColor }}
+                        />
+                      )}
+                      <span className="flex-1">{calendar.summary}</span>
+                      {calendar.primary && (
+                        <Badge variant="secondary" className="text-[10px] px-1 py-0">Primary</Badge>
+                      )}
+                    </label>
+                  </div>
+                ))}
+              </div>
+              {selectedCalendars.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Events from {selectedCalendars.length} calendar{selectedCalendars.length > 1 ? 's' : ''} will be considered for availability.
+                </p>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
 
         {/* Error Display */}
         {error && (
@@ -797,17 +932,30 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                                   .map((event, index) => (
                                     <div
                                       key={index}
-                                      className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800"
+                                      className="flex items-start gap-2 p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800"
                                     >
-                                      <div className="flex-1">
-                                        <span className="text-sm font-medium text-red-800 dark:text-red-300">
-                                          {format(new Date(event.start.dateTime!), 'HH:mm')} - {format(new Date(event.end.dateTime!), 'HH:mm')}
-                                        </span>
-                                        <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                                      {event.calendarColor && (
+                                        <div 
+                                          className="w-1 h-full rounded-full flex-shrink-0 mt-0.5" 
+                                          style={{ backgroundColor: event.calendarColor }}
+                                        />
+                                      )}
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-sm font-medium text-red-800 dark:text-red-300">
+                                            {format(new Date(event.start.dateTime!), 'HH:mm')} - {format(new Date(event.end.dateTime!), 'HH:mm')}
+                                          </span>
+                                          {event.calendarName && event.calendarName !== 'primary' && (
+                                            <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
+                                              {event.calendarName}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <p className="text-xs text-red-600 dark:text-red-400 mt-0.5 truncate">
                                           {event.summary}
                                         </p>
                                       </div>
-                                      <CalendarIcon className="h-3 w-3 text-red-600 dark:text-red-400" />
+                                      <CalendarIcon className="h-3 w-3 text-red-600 dark:text-red-400 flex-shrink-0" />
                                     </div>
                                   ))}
                               </div>

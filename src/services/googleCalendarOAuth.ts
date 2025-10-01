@@ -2,6 +2,15 @@ import { format, startOfDay, endOfDay, addMinutes } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 import GoogleOAuthService, { OAuthCredentials, GoogleTokens } from './googleOAuth';
 
+export interface GoogleCalendarInfo {
+  id: string;
+  summary: string;
+  primary?: boolean;
+  accessRole: string;
+  backgroundColor?: string;
+  foregroundColor?: string;
+}
+
 export interface CalendarEvent {
   id: string;
   summary: string;
@@ -14,6 +23,9 @@ export interface CalendarEvent {
     date?: string;
   };
   status: string;
+  calendarId?: string;
+  calendarName?: string;
+  calendarColor?: string;
 }
 
 export interface TimeSlot {
@@ -37,20 +49,13 @@ class GoogleCalendarOAuthService extends GoogleOAuthService {
     super(credentials);
   }
 
-  async getCalendarEvents(calendarId: string = 'primary', startDate: Date, endDate: Date): Promise<CalendarEvent[]> {
+  async getCalendarList(): Promise<GoogleCalendarInfo[]> {
     const accessToken = await this.getValidAccessToken();
     if (!accessToken) {
       throw new Error('No valid access token available. Please authenticate first.');
     }
 
-    const timeMin = startOfDay(startDate).toISOString();
-    const timeMax = endOfDay(endDate).toISOString();
-    
-    const url = `${this.baseUrl}/calendars/${encodeURIComponent(calendarId)}/events?` +
-      `timeMin=${timeMin}&` +
-      `timeMax=${timeMax}&` +
-      `orderBy=startTime&` +
-      `singleEvents=true`;
+    const url = `${this.baseUrl}/users/me/calendarList`;
 
     try {
       const response = await fetch(url, {
@@ -69,7 +74,89 @@ class GoogleCalendarOAuthService extends GoogleOAuthService {
       }
       
       const data = await response.json();
-      return data.items || [];
+      return (data.items || []).map((cal: any) => ({
+        id: cal.id,
+        summary: cal.summary,
+        primary: cal.primary || false,
+        accessRole: cal.accessRole,
+        backgroundColor: cal.backgroundColor,
+        foregroundColor: cal.foregroundColor,
+      }));
+    } catch (error) {
+      console.error('Error fetching calendar list:', error);
+      throw error;
+    }
+  }
+
+  async getCalendarEvents(calendarIds: string | string[] = 'primary', startDate: Date, endDate: Date): Promise<CalendarEvent[]> {
+    const accessToken = await this.getValidAccessToken();
+    if (!accessToken) {
+      throw new Error('No valid access token available. Please authenticate first.');
+    }
+
+    const timeMin = startOfDay(startDate).toISOString();
+    const timeMax = endOfDay(endDate).toISOString();
+    
+    // Support both single calendar ID and array of IDs
+    const calendarsToFetch = Array.isArray(calendarIds) ? calendarIds : [calendarIds];
+    
+    try {
+      // Fetch events from all calendars in parallel
+      const allEventsPromises = calendarsToFetch.map(async (calendarId) => {
+        const url = `${this.baseUrl}/calendars/${encodeURIComponent(calendarId)}/events?` +
+          `timeMin=${timeMin}&` +
+          `timeMax=${timeMax}&` +
+          `orderBy=startTime&` +
+          `singleEvents=true`;
+
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            this.clearTokens();
+            throw new Error('Authentication expired. Please log in again.');
+          }
+          console.error(`Error fetching events from calendar ${calendarId}: ${response.status}`);
+          return [];
+        }
+        
+        const data = await response.json();
+        
+        // Get calendar info to add metadata to events
+        const calendarResponse = await fetch(
+          `${this.baseUrl}/calendars/${encodeURIComponent(calendarId)}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+            },
+          }
+        );
+        
+        const calendarInfo = calendarResponse.ok ? await calendarResponse.json() : null;
+        
+        // Add calendar metadata to each event
+        return (data.items || []).map((event: CalendarEvent) => ({
+          ...event,
+          calendarId,
+          calendarName: calendarInfo?.summary || calendarId,
+          calendarColor: calendarInfo?.backgroundColor,
+        }));
+      });
+
+      const allEventsArrays = await Promise.all(allEventsPromises);
+      const allEvents = allEventsArrays.flat();
+      
+      // Sort by start time
+      return allEvents.sort((a, b) => {
+        const aTime = a.start.dateTime || a.start.date || '';
+        const bTime = b.start.dateTime || b.start.date || '';
+        return aTime.localeCompare(bTime);
+      });
     } catch (error) {
       console.error('Error fetching calendar events:', error);
       throw error;
@@ -79,14 +166,15 @@ class GoogleCalendarOAuthService extends GoogleOAuthService {
   async getAvailableSlots(
     selectedDates: Date[], 
     slotDuration: 15 | 30 | 60 = 30,
-    workingHours = { start: 9, end: 17 }
+    workingHours = { start: 9, end: 17 },
+    calendarIds: string | string[] = 'primary'
   ): Promise<AvailableSlot[]> {
     const availableSlots: AvailableSlot[] = [];
     
     for (const date of selectedDates) {
       try {
-        // Get events for this specific date
-        const events = await this.getCalendarEvents('primary', date, date);
+        // Get events for this specific date from all selected calendars
+        const events = await this.getCalendarEvents(calendarIds, date, date);
         
         // Filter out all-day events and cancelled events
         const timedEvents = events.filter(event => 
