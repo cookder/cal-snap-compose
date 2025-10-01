@@ -1,7 +1,18 @@
 import { useState, useEffect, Suspense, lazy, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { LogOut, User, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -33,6 +44,7 @@ const Index = () => {
   const [credentialsError, setCredentialsError] = useState<string | null>(null);
   const [showInstructions, setShowInstructions] = useState(true);
   const [importedEvents, setImportedEvents] = useState<any[]>([]);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -151,13 +163,55 @@ const Index = () => {
   }, [toast]);
 
   const handleClearImportedEvents = useCallback(() => {
+    setShowClearConfirm(true);
+  }, []);
+
+  const confirmClear = useCallback(() => {
     setImportedEvents([]);
     setIcsSelectedSlots([]);
     setShowICSCalendar(true);
+    setShowClearConfirm(false);
     toast({
       title: "Imported events cleared",
     });
   }, [toast]);
+
+  // Bulk selection functions
+  const selectAllGoogleSlots = useCallback(() => {
+    setGoogleSelectedSlots(prev => 
+      prev.map(daySlot => ({
+        ...daySlot,
+        slots: daySlot.slots.map(slot => ({ ...slot, selected: true }))
+      }))
+    );
+  }, []);
+
+  const deselectAllGoogleSlots = useCallback(() => {
+    setGoogleSelectedSlots(prev => 
+      prev.map(daySlot => ({
+        ...daySlot,
+        slots: daySlot.slots.map(slot => ({ ...slot, selected: false }))
+      }))
+    );
+  }, []);
+
+  const selectAllIcsSlots = useCallback(() => {
+    setIcsSelectedSlots(prev => 
+      prev.map(daySlot => ({
+        ...daySlot,
+        slots: daySlot.slots.map(slot => ({ ...slot, selected: true }))
+      }))
+    );
+  }, []);
+
+  const deselectAllIcsSlots = useCallback(() => {
+    setIcsSelectedSlots(prev => 
+      prev.map(daySlot => ({
+        ...daySlot,
+        slots: daySlot.slots.map(slot => ({ ...slot, selected: false }))
+      }))
+    );
+  }, []);
 
   if (!user) {
     return (
@@ -220,6 +274,55 @@ const Index = () => {
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{credentialsError}</AlertDescription>
             </Alert>
+          </div>
+        )}
+        
+        {/* Quick Actions */}
+        {(showGoogleCalendar || (showICSCalendar && importedEvents.length > 0)) && (
+          <div className="mb-2">
+            <Card>
+              <CardHeader className="pb-2 pt-3">
+                <CardTitle className="text-sm">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-wrap gap-2">
+                {showGoogleCalendar && (
+                  <>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={selectAllGoogleSlots}
+                    >
+                      Select All Google
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={deselectAllGoogleSlots}
+                    >
+                      Clear Google
+                    </Button>
+                  </>
+                )}
+                {showICSCalendar && importedEvents.length > 0 && (
+                  <>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={selectAllIcsSlots}
+                    >
+                      Select All ICS
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={deselectAllIcsSlots}
+                    >
+                      Clear ICS
+                    </Button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </div>
         )}
         
@@ -330,6 +433,25 @@ const Index = () => {
           </Suspense>
         </div>
       </main>
+
+      {/* Clear confirmation dialog */}
+      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear imported events?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove all imported calendar events and their selected time slots.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmClear}>
+              Clear Events
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
