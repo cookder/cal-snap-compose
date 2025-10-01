@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -296,15 +296,27 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
     }
   }, [calendarService, isAuthenticated, selectedDates, selectedDurations, customDuration, onAvailabilityChange, onSelectedSlotsChange, toast]);
 
+  // Add debounced version of fetchCalendarData
+  const debouncedFetch = useMemo(() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    return () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        fetchCalendarData();
+      }, 500); // Wait 500ms after last change
+    };
+  }, [fetchCalendarData]);
+
   useEffect(() => {
     if (isAuthenticated && selectedDates.length > 0) {
-      fetchCalendarData();
+      debouncedFetch();
     } else {
       setAvailability([]);
       onAvailabilityChange([]);
       onSelectedSlotsChange([]);
     }
-  }, [isAuthenticated, selectedDates, selectedDurations, customDuration, fetchCalendarData, onAvailabilityChange, onSelectedSlotsChange]);
+  }, [isAuthenticated, selectedDates, selectedDurations, customDuration, debouncedFetch, onAvailabilityChange, onSelectedSlotsChange]);
 
   const removeDate = (dateToRemove: Date) => {
     setSelectedDates(prev => prev.filter(d => !isSameDay(d, dateToRemove)));
