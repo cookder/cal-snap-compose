@@ -17,9 +17,11 @@ interface GoogleCalendarViewProps {
   credentials: OAuthCredentials | null;
   onTogglePanel?: () => void;
   showToggle?: boolean;
+  onSelectAll?: () => void;
+  onDeselectAll?: () => void;
 }
 
-const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityChange, onSelectedSlotsChange, credentials, onTogglePanel, showToggle }) => {
+const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityChange, onSelectedSlotsChange, credentials, onTogglePanel, showToggle, onSelectAll, onDeselectAll }) => {
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [events, setEvents] = useState<{ [key: string]: CalendarEvent[] }>({});
   const [availability, setAvailability] = useState<AvailableSlot[]>([]);
@@ -105,6 +107,48 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
     }
   };
 
+
+  // Select all slots
+  const selectAllSlots = useCallback(() => {
+    setAvailability(prev => {
+      const updated = prev.map(daySlot => ({
+        ...daySlot,
+        slots: daySlot.slots.map(slot => ({ ...slot, selected: true }))
+      }));
+      
+      const selectedSlots = updated.map(daySlot => ({
+        date: daySlot.date,
+        slots: daySlot.slots.filter(slot => slot.selected)
+      })).filter(daySlot => daySlot.slots.length > 0);
+      
+      onSelectedSlotsChange(selectedSlots);
+      return updated;
+    });
+  }, [onSelectedSlotsChange]);
+
+  // Deselect all slots
+  const deselectAllSlots = useCallback(() => {
+    setAvailability(prev => {
+      const updated = prev.map(daySlot => ({
+        ...daySlot,
+        slots: daySlot.slots.map(slot => ({ ...slot, selected: false }))
+      }));
+      
+      onSelectedSlotsChange([]);
+      return updated;
+    });
+  }, [onSelectedSlotsChange]);
+
+  // Expose select/deselect functions to parent via callbacks
+  useEffect(() => {
+    if (onSelectAll) {
+      // Store function reference in a way parent can call it
+      (window as any).__googleCalendarSelectAll = selectAllSlots;
+    }
+    if (onDeselectAll) {
+      (window as any).__googleCalendarDeselectAll = deselectAllSlots;
+    }
+  }, [selectAllSlots, deselectAllSlots, onSelectAll, onDeselectAll]);
 
   // Toggle slot selection
   const toggleSlotSelection = (slotId: string) => {

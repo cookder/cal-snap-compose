@@ -178,39 +178,27 @@ const Index = () => {
 
   // Bulk selection functions
   const selectAllGoogleSlots = useCallback(() => {
-    setGoogleSelectedSlots(prev => 
-      prev.map(daySlot => ({
-        ...daySlot,
-        slots: daySlot.slots.map(slot => ({ ...slot, selected: true }))
-      }))
-    );
+    if ((window as any).__googleCalendarSelectAll) {
+      (window as any).__googleCalendarSelectAll();
+    }
   }, []);
 
   const deselectAllGoogleSlots = useCallback(() => {
-    setGoogleSelectedSlots(prev => 
-      prev.map(daySlot => ({
-        ...daySlot,
-        slots: daySlot.slots.map(slot => ({ ...slot, selected: false }))
-      }))
-    );
+    if ((window as any).__googleCalendarDeselectAll) {
+      (window as any).__googleCalendarDeselectAll();
+    }
   }, []);
 
   const selectAllIcsSlots = useCallback(() => {
-    setIcsSelectedSlots(prev => 
-      prev.map(daySlot => ({
-        ...daySlot,
-        slots: daySlot.slots.map(slot => ({ ...slot, selected: true }))
-      }))
-    );
+    if ((window as any).__icsCalendarSelectAll) {
+      (window as any).__icsCalendarSelectAll();
+    }
   }, []);
 
   const deselectAllIcsSlots = useCallback(() => {
-    setIcsSelectedSlots(prev => 
-      prev.map(daySlot => ({
-        ...daySlot,
-        slots: daySlot.slots.map(slot => ({ ...slot, selected: false }))
-      }))
-    );
+    if ((window as any).__icsCalendarDeselectAll) {
+      (window as any).__icsCalendarDeselectAll();
+    }
   }, []);
 
   // Memoize callbacks to prevent infinite loops
@@ -351,6 +339,8 @@ const Index = () => {
                     credentials={credentials}
                     onTogglePanel={handleGoogleToggle}
                     showToggle={showICSCalendar || importedEvents.length > 0}
+                    onSelectAll={() => {}}
+                    onDeselectAll={() => {}}
                   />
                 </Suspense>
               ) : (
@@ -380,6 +370,8 @@ const Index = () => {
                     onClearEvents={handleClearImportedEvents}
                     onTogglePanel={handleIcsToggle}
                     showToggle={showGoogleCalendar}
+                    onSelectAll={() => {}}
+                    onDeselectAll={() => {}}
                   />
                 </Suspense>
               )}

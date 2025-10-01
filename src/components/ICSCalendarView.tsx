@@ -26,9 +26,11 @@ interface ICSCalendarViewProps {
   onClearEvents: () => void;
   onTogglePanel?: () => void;
   showToggle?: boolean;
+  onSelectAll?: () => void;
+  onDeselectAll?: () => void;
 }
 
-export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsChange, onClearEvents, onTogglePanel, showToggle }: ICSCalendarViewProps) {
+export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsChange, onClearEvents, onTogglePanel, showToggle, onSelectAll, onDeselectAll }: ICSCalendarViewProps) {
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [selectedDurations, setSelectedDurations] = useState<Set<15 | 30 | 60 | 'custom' | 'grouped'>>(new Set([30, 60]));
   const [customDuration, setCustomDuration] = useState<number>(45);
@@ -216,6 +218,47 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
     
     onSelectedSlotsChange(selectedSlots);
   }, [selectedDates, selectedDurations, customDuration, events, onAvailabilityChange, onSelectedSlotsChange]);
+
+  // Select all slots
+  const selectAllSlots = useCallback(() => {
+    setAvailability(prev => {
+      const updated = prev.map(daySlot => ({
+        ...daySlot,
+        slots: daySlot.slots.map(slot => ({ ...slot, selected: true }))
+      }));
+      
+      const selectedSlots = updated.map(daySlot => ({
+        date: daySlot.date,
+        slots: daySlot.slots.filter(slot => slot.selected)
+      })).filter(daySlot => daySlot.slots.length > 0);
+      
+      onSelectedSlotsChange(selectedSlots);
+      return updated;
+    });
+  }, [onSelectedSlotsChange]);
+
+  // Deselect all slots
+  const deselectAllSlots = useCallback(() => {
+    setAvailability(prev => {
+      const updated = prev.map(daySlot => ({
+        ...daySlot,
+        slots: daySlot.slots.map(slot => ({ ...slot, selected: false }))
+      }));
+      
+      onSelectedSlotsChange([]);
+      return updated;
+    });
+  }, [onSelectedSlotsChange]);
+
+  // Expose select/deselect functions to parent via callbacks
+  useEffect(() => {
+    if (onSelectAll) {
+      (window as any).__icsCalendarSelectAll = selectAllSlots;
+    }
+    if (onDeselectAll) {
+      (window as any).__icsCalendarDeselectAll = deselectAllSlots;
+    }
+  }, [selectAllSlots, deselectAllSlots, onSelectAll, onDeselectAll]);
 
   // Toggle slot selection
   const toggleSlotSelection = (slotId: string) => {
