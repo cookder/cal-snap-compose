@@ -336,27 +336,24 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
     }
   }, [calendarService, isAuthenticated, selectedDates, selectedDurations, customDuration, eventCache, onAvailabilityChange, onSelectedSlotsChange, toast]);
 
-  // Add debounced version of fetchCalendarData
-  const debouncedFetch = useMemo(() => {
-    let timeoutId: NodeJS.Timeout;
-    
-    return () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        fetchCalendarData();
-      }, 500); // Wait 500ms after last change
-    };
-  }, [fetchCalendarData]);
-
   useEffect(() => {
-    if (isAuthenticated && selectedDates.length > 0) {
-      debouncedFetch();
-    } else {
+    if (!isAuthenticated || selectedDates.length === 0) {
       setAvailability([]);
       onAvailabilityChange([]);
       onSelectedSlotsChange([]);
+      return;
     }
-  }, [isAuthenticated, selectedDates, selectedDurations, customDuration, debouncedFetch, onAvailabilityChange, onSelectedSlotsChange]);
+
+    // Debounce the fetch to avoid rapid calls
+    const timeoutId = setTimeout(() => {
+      fetchCalendarData();
+    }, 500);
+
+    // Cleanup function to cancel pending fetches
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [isAuthenticated, selectedDates, selectedDurations, customDuration, fetchCalendarData, onAvailabilityChange, onSelectedSlotsChange]);
 
   const removeDate = (dateToRemove: Date) => {
     setSelectedDates(prev => prev.filter(d => !isSameDay(d, dateToRemove)));

@@ -213,6 +213,19 @@ const Index = () => {
     );
   }, []);
 
+  // Memoize callbacks to prevent infinite loops
+  const handleAvailabilityChange = useCallback(() => {
+    // Not used anymore but needed to prevent re-renders
+  }, []);
+
+  const handleGoogleToggle = useCallback(() => {
+    setShowGoogleCalendar(false);
+  }, []);
+
+  const handleIcsToggle = useCallback(() => {
+    setShowICSCalendar(false);
+  }, []);
+
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -333,10 +346,10 @@ const Index = () => {
               {credentials ? (
                 <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
                   <GoogleCalendarView 
-                    onAvailabilityChange={() => {}} // Not used anymore
+                    onAvailabilityChange={handleAvailabilityChange}
                     onSelectedSlotsChange={setGoogleSelectedSlots}
                     credentials={credentials}
-                    onTogglePanel={() => setShowGoogleCalendar(false)}
+                    onTogglePanel={handleGoogleToggle}
                     showToggle={showICSCalendar || importedEvents.length > 0}
                   />
                 </Suspense>
@@ -362,10 +375,10 @@ const Index = () => {
                 <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
                   <ICSCalendarView 
                     events={importedEvents}
-                    onAvailabilityChange={() => {}} // Not used anymore
+                    onAvailabilityChange={handleAvailabilityChange}
                     onSelectedSlotsChange={setIcsSelectedSlots}
                     onClearEvents={handleClearImportedEvents}
-                    onTogglePanel={() => setShowICSCalendar(false)}
+                    onTogglePanel={handleIcsToggle}
                     showToggle={showGoogleCalendar}
                   />
                 </Suspense>
