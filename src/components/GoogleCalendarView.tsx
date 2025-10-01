@@ -38,7 +38,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
   const [availableCalendars, setAvailableCalendars] = useState<GoogleCalendarInfo[]>([]);
   const [selectedCalendars, setSelectedCalendars] = useState<string[]>([]);
   const [loadingCalendars, setLoadingCalendars] = useState(false);
-  const [showCalendarSelector, setShowCalendarSelector] = useState(false);
+  const [showCalendarSelector, setShowCalendarSelector] = useState(true);
   const { toast } = useToast();
 
   // Add cache with 5 minute expiration
@@ -556,18 +556,24 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
           )}
         </div>
 
-        {/* Calendar Selector */}
+        {/* Calendar Selector - Mobile Optimized */}
         {isAuthenticated && availableCalendars.length > 0 && (
           <Collapsible open={showCalendarSelector} onOpenChange={setShowCalendarSelector}>
             <CollapsibleTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full h-8 text-xs justify-between">
-                <span className="flex items-center gap-1">
-                  <CalendarIcon className="h-3 w-3" />
-                  {selectedCalendars.length === 0 
-                    ? 'Select Calendars' 
-                    : `${selectedCalendars.length} Calendar${selectedCalendars.length > 1 ? 's' : ''} Selected`}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full min-h-[44px] md:h-8 text-sm md:text-xs justify-between touch-manipulation"
+              >
+                <span className="flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4 md:h-3 md:w-3" />
+                  <span className="font-medium">
+                    {selectedCalendars.length === 0 
+                      ? 'Select Calendars' 
+                      : `${selectedCalendars.length} Calendar${selectedCalendars.length > 1 ? 's' : ''} Selected`}
+                  </span>
                 </span>
-                <ChevronDown className={`h-3 w-3 transition-transform ${showCalendarSelector ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`h-4 w-4 md:h-3 md:w-3 transition-transform ${showCalendarSelector ? 'rotate-180' : ''}`} />
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-2 space-y-2">
@@ -576,7 +582,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                   variant="outline" 
                   size="sm" 
                   onClick={selectAllCalendars}
-                  className="h-6 text-xs flex-1"
+                  className="min-h-[44px] md:h-6 text-sm md:text-xs flex-1 touch-manipulation"
                   disabled={selectedCalendars.length === availableCalendars.length}
                 >
                   Select All
@@ -585,31 +591,32 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                   variant="outline" 
                   size="sm" 
                   onClick={deselectAllCalendars}
-                  className="h-6 text-xs flex-1"
+                  className="min-h-[44px] md:h-6 text-sm md:text-xs flex-1 touch-manipulation"
                   disabled={selectedCalendars.length === 0}
                 >
                   Deselect All
                 </Button>
               </div>
-              <div className="space-y-1 max-h-48 overflow-y-auto border rounded-md p-2">
+              <div className="space-y-1 max-h-[60vh] md:max-h-48 overflow-y-auto border rounded-md p-2">
                 {availableCalendars.map(calendar => (
                   <div 
                     key={calendar.id}
-                    className="flex items-center space-x-2 p-1.5 hover:bg-muted rounded cursor-pointer"
+                    className="flex items-center space-x-3 p-3 md:p-1.5 hover:bg-muted rounded cursor-pointer touch-manipulation active:bg-muted/50 transition-colors"
                     onClick={() => toggleCalendar(calendar.id)}
                   >
                     <Checkbox 
                       id={`calendar-${calendar.id}`}
                       checked={selectedCalendars.includes(calendar.id)}
                       onCheckedChange={() => toggleCalendar(calendar.id)}
+                      className="h-5 w-5 md:h-4 md:w-4"
                     />
                     <label 
                       htmlFor={`calendar-${calendar.id}`}
-                      className="flex-1 text-xs cursor-pointer flex items-center gap-2"
+                      className="flex-1 text-sm md:text-xs cursor-pointer flex items-center gap-2 min-h-[44px] md:min-h-0"
                     >
                       {calendar.backgroundColor && (
                         <div 
-                          className="w-3 h-3 rounded-full border border-border" 
+                          className="w-4 h-4 md:w-3 md:h-3 rounded-full border border-border" 
                           style={{ backgroundColor: calendar.backgroundColor }}
                         />
                       )}
@@ -622,7 +629,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                 ))}
               </div>
               {selectedCalendars.length > 0 && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground px-2">
                   Events from {selectedCalendars.length} calendar{selectedCalendars.length > 1 ? 's' : ''} will be considered for availability.
                 </p>
               )}
@@ -643,51 +650,51 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
           <div className="space-y-2">
             <label className="text-xs font-medium">Meeting Durations</label>
             <div className="space-y-2 p-2 border rounded-md bg-background">
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-2 cursor-pointer min-h-[44px] md:min-h-0 touch-manipulation">
                 <input
                   type="checkbox"
                   checked={selectedDurations.has(15)}
                   onChange={() => toggleDuration(15)}
-                  className="h-3.5 w-3.5 rounded"
+                  className="h-4 w-4 md:h-3.5 md:w-3.5 rounded"
                 />
-                <span className="text-xs">15 minutes</span>
+                <span className="text-sm md:text-xs">15 minutes</span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-2 cursor-pointer min-h-[44px] md:min-h-0 touch-manipulation">
                 <input
                   type="checkbox"
                   checked={selectedDurations.has(30)}
                   onChange={() => toggleDuration(30)}
-                  className="h-3.5 w-3.5 rounded"
+                  className="h-4 w-4 md:h-3.5 md:w-3.5 rounded"
                 />
-                <span className="text-xs">30 minutes</span>
+                <span className="text-sm md:text-xs">30 minutes</span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-2 cursor-pointer min-h-[44px] md:min-h-0 touch-manipulation">
                 <input
                   type="checkbox"
                   checked={selectedDurations.has(60)}
                   onChange={() => toggleDuration(60)}
-                  className="h-3.5 w-3.5 rounded"
+                  className="h-4 w-4 md:h-3.5 md:w-3.5 rounded"
                 />
-                <span className="text-xs">60 minutes</span>
+                <span className="text-sm md:text-xs">60 minutes</span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-2 cursor-pointer min-h-[44px] md:min-h-0 touch-manipulation">
                 <input
                   type="checkbox"
                   checked={selectedDurations.has('grouped')}
                   onChange={() => toggleDuration('grouped')}
-                  className="h-3.5 w-3.5 rounded"
+                  className="h-4 w-4 md:h-3.5 md:w-3.5 rounded"
                 />
-                <span className="text-xs">Grouped Chunks</span>
+                <span className="text-sm md:text-xs">Grouped Chunks</span>
               </label>
               <div className="space-y-1">
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="flex items-center gap-2 cursor-pointer min-h-[44px] md:min-h-0 touch-manipulation">
                   <input
                     type="checkbox"
                     checked={selectedDurations.has('custom')}
                     onChange={() => toggleDuration('custom')}
-                    className="h-3.5 w-3.5 rounded"
+                    className="h-4 w-4 md:h-3.5 md:w-3.5 rounded"
                   />
-                  <span className="text-xs">Custom Duration</span>
+                  <span className="text-sm md:text-xs">Custom Duration</span>
                 </label>
                 {selectedDurations.has('custom') && (
                   <div className="flex items-center gap-1 ml-5">
@@ -698,10 +705,10 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                       step="5"
                       value={customDuration}
                       onChange={(e) => setCustomDuration(Number(e.target.value))}
-                      className="w-16 h-6 px-2 text-xs border rounded-md bg-background"
+                      className="w-16 h-8 md:h-6 px-2 text-sm md:text-xs border rounded-md bg-background"
                       placeholder="45"
                     />
-                    <span className="text-xs text-muted-foreground">min</span>
+                    <span className="text-sm md:text-xs text-muted-foreground">min</span>
                   </div>
                 )}
               </div>
@@ -790,7 +797,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                                     <button
                                       key={index}
                                       onClick={() => toggleSlotSelection(slot.id!)}
-                                      className={`w-full flex items-center justify-between p-2 rounded-md border transition-all ${
+                                      className={`w-full flex items-center justify-between p-3 md:p-2 rounded-md border transition-all min-h-[44px] md:min-h-0 touch-manipulation ${
                                         slot.selected
                                           ? 'bg-purple-100 dark:bg-purple-900/50 border-purple-300 dark:border-purple-700 ring-2 ring-purple-500 ring-opacity-50'
                                           : 'bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800 hover:bg-purple-75 dark:hover:bg-purple-900/40'
@@ -823,7 +830,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                                   <button
                                     key={index}
                                     onClick={() => toggleSlotSelection(slot.id!)}
-                                    className={`w-full flex items-center justify-between p-2 rounded-md border transition-all ${
+                                    className={`w-full flex items-center justify-between p-3 md:p-2 rounded-md border transition-all min-h-[44px] md:min-h-0 touch-manipulation ${
                                       slot.selected
                                         ? 'bg-amber-100 dark:bg-amber-900/50 border-amber-300 dark:border-amber-700 ring-2 ring-amber-500 ring-opacity-50'
                                         : 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 hover:bg-amber-75 dark:hover:bg-amber-900/40'
@@ -850,7 +857,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                                   <button
                                     key={index}
                                     onClick={() => toggleSlotSelection(slot.id!)}
-                                    className={`w-full flex items-center justify-between p-2 rounded-md border transition-all ${
+                                    className={`w-full flex items-center justify-between p-3 md:p-2 rounded-md border transition-all min-h-[44px] md:min-h-0 touch-manipulation ${
                                       slot.selected
                                         ? 'bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500 ring-opacity-50'
                                         : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 hover:bg-blue-75 dark:hover:bg-blue-900/40'
@@ -877,7 +884,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                                   <button
                                     key={index}
                                     onClick={() => toggleSlotSelection(slot.id!)}
-                                    className={`w-full flex items-center justify-between p-2 rounded-md border transition-all ${
+                                    className={`w-full flex items-center justify-between p-3 md:p-2 rounded-md border transition-all min-h-[44px] md:min-h-0 touch-manipulation ${
                                       slot.selected
                                         ? 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 ring-2 ring-green-500 ring-opacity-50'
                                         : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:bg-green-75 dark:hover:bg-green-900/40'
@@ -904,7 +911,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                                   <button
                                     key={index}
                                     onClick={() => toggleSlotSelection(slot.id!)}
-                                    className={`w-full flex items-center justify-between p-2 rounded-md border transition-all ${
+                                    className={`w-full flex items-center justify-between p-3 md:p-2 rounded-md border transition-all min-h-[44px] md:min-h-0 touch-manipulation ${
                                       slot.selected
                                         ? 'bg-indigo-100 dark:bg-indigo-900/50 border-indigo-300 dark:border-indigo-700 ring-2 ring-indigo-500 ring-opacity-50'
                                         : 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-75 dark:hover:bg-indigo-900/40'
@@ -932,7 +939,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
                                   .map((event, index) => (
                                     <div
                                       key={index}
-                                      className="flex items-start gap-2 p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800"
+                                      className="flex items-start gap-2 p-3 md:p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800"
                                     >
                                       {event.calendarColor && (
                                         <div 
