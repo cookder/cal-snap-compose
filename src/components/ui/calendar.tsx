@@ -29,7 +29,10 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
         row: "flex w-full mt-2",
         cell: cn(
-          "h-9 w-9 text-center text-sm p-0 relative",
+          // Base size - larger on mobile
+          "h-9 w-9 sm:h-9 sm:w-9 text-center text-sm p-0 relative",
+          // Mobile: Add more spacing between cells
+          "sm:mx-0 mx-0.5",
           "[&:has([aria-selected].day-range-end)]:rounded-r-md",
           "[&:has([aria-selected]:not(.day-outside))]:bg-accent",
           "first:[&:has([aria-selected])]:rounded-l-md",
@@ -38,13 +41,28 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         ),
         day: cn(
           buttonVariants({ variant: "ghost" }),
-          "h-9 w-9 p-0 font-normal relative",
+          // Larger touch targets on mobile (44x44px minimum)
+          "h-11 w-11 sm:h-9 sm:w-9",
+          // Add padding for larger tap area
+          "p-2 sm:p-0",
+          "font-normal relative",
           "bg-transparent hover:bg-accent hover:text-accent-foreground",
           "transition-all duration-200",
-          // Add checkmark for selected dates
-          "aria-selected:after:content-['✓'] aria-selected:after:absolute aria-selected:after:top-0 aria-selected:after:right-0.5 aria-selected:after:text-[10px] aria-selected:after:font-bold",
-          // Add ring border for selected dates
-          "aria-selected:ring-2 aria-selected:ring-primary aria-selected:ring-offset-1"
+          // Prevent text selection on mobile
+          "select-none touch-manipulation",
+          // Add checkmark for selected dates - adjust position for mobile
+          "aria-selected:after:content-['✓']",
+          "aria-selected:after:absolute",
+          "aria-selected:after:top-0.5 sm:aria-selected:after:top-0",
+          "aria-selected:after:right-1 sm:aria-selected:after:right-0.5",
+          "aria-selected:after:text-xs sm:aria-selected:after:text-[10px]",
+          "aria-selected:after:font-bold",
+          // Larger ring border on mobile for visibility
+          "aria-selected:ring-2 sm:aria-selected:ring-2",
+          "aria-selected:ring-primary",
+          "aria-selected:ring-offset-2 sm:aria-selected:ring-offset-1",
+          // Add active state for touch feedback
+          "active:scale-95 active:transition-transform active:duration-100"
         ),
         day_range_end: "day-range-end",
         day_selected: cn(
