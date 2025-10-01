@@ -1,17 +1,15 @@
-import { useState, useEffect, Suspense, lazy } from 'react';
+import { useState, useEffect, Suspense, lazy, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent } from '@/components/ui/card';
 import { LogOut, User, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { toast } from 'sonner';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { AvailableSlot, TimeSlot } from "@/services/googleCalendarOAuth";
 import { OAuthCredentials } from "@/services/googleOAuth";
 
-// Lazy load components for better performance
+// Lazy load components
 const EmailComposer = lazy(() => import("@/components/EmailComposer").then(module => ({ default: module.EmailComposer })));
 const GoogleCalendarView = lazy(() => import("@/components/GoogleCalendarView"));
 const GoogleAvailabilityGenerator = lazy(() => import("@/components/GoogleAvailabilityGenerator").then(module => ({ default: module.GoogleAvailabilityGenerator })));
@@ -21,11 +19,13 @@ const ICSImporter = lazy(() => import("@/components/ICSImporter").then(module =>
 const ICSCalendarView = lazy(() => import("@/components/ICSCalendarView").then(module => ({ default: module.ICSCalendarView })));
 
 const Index = () => {
-  // Force cache invalidation - Google Calendar integration active
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [availability, setAvailability] = useState<AvailableSlot[]>([]);
-  const [selectedSlots, setSelectedSlots] = useState<{ date: Date; slots: TimeSlot[] }[]>([]);
+  
+  // Separate state for each calendar source
+  const [googleSelectedSlots, setGoogleSelectedSlots] = useState<{ date: Date; slots: TimeSlot[] }[]>([]);
+  const [icsSelectedSlots, setIcsSelectedSlots] = useState<{ date: Date; slots: TimeSlot[] }[]>([]);
+  
   const [showGoogleCalendar, setShowGoogleCalendar] = useState(true);
   const [showICSCalendar, setShowICSCalendar] = useState(true);
   const [availabilityText, setAvailabilityText] = useState("");
@@ -33,18 +33,39 @@ const Index = () => {
   const [credentialsError, setCredentialsError] = useState<string | null>(null);
   const [showInstructions, setShowInstructions] = useState(true);
   const [importedEvents, setImportedEvents] = useState<any[]>([]);
+  
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Fetch OAuth credentials from secrets via edge function
+  // Combine slots from both calendars
+  const combinedSelectedSlots = useCallback(() => {
+    const allSlots = [...googleSelectedSlots, ...icsSelectedSlots];
+    
+    // Merge slots by date
+    const slotsByDate = new Map<string, TimeSlot[]>();
+    
+    allSlots.forEach(({ date, slots }) => {
+      const dateKey = date.toISOString().split('T')[0];
+      const existing = slotsByDate.get(dateKey) || [];
+      slotsByDate.set(dateKey, [...existing, ...slots]);
+    });
+    
+    // Convert back to array format
+    return Array.from(slotsByDate.entries()).map(([dateStr, slots]) => ({
+      date: new Date(dateStr),
+      slots: slots
+    }));
+  }, [googleSelectedSlots, icsSelectedSlots]);
+
+  // Fetch OAuth credentials
   useEffect(() => {
     const fetchCredentials = async () => {
+      if (!user) return;
+      
       try {
         const { data, error } = await supabase.functions.invoke('get-google-oauth-credentials');
         
-        if (error) {
-          throw error;
-        }
+        if (error) throw error;
         
         if (data?.clientId && data?.clientSecret) {
           setCredentials({
@@ -53,23 +74,21 @@ const Index = () => {
           });
           setCredentialsError(null);
         } else {
-          setCredentialsError("Google OAuth credentials not found. Please add GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET to your Supabase secrets.");
+          setCredentialsError("Google OAuth credentials not found.");
         }
       } catch (error) {
         console.error('Error fetching OAuth credentials:', error);
-        setCredentialsError("Failed to load Google OAuth credentials. Please check your Supabase configuration.");
+        setCredentialsError("Failed to load Google OAuth credentials.");
       }
     };
 
-    if (user) {
-      fetchCredentials();
-    }
+    fetchCredentials();
   }, [user]);
 
+  // Auth state management
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -79,7 +98,6 @@ const Index = () => {
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -93,20 +111,19 @@ const Index = () => {
   }, [navigate]);
 
   const handleSignOut = async () => {
-    // Robust sign out: try global, then local, then hard-clear client tokens
     try {
-      await supabase.auth.signOut(); // global
+      await supabase.auth.signOut();
     } catch (e) {
-      // ignore server session_not_found
+      // Ignore errors
     }
 
     try {
       await supabase.auth.signOut({ scope: 'local' });
     } catch (e) {
-      // ignore local errors (seen as 403 when server session is gone)
+      // Ignore errors
     }
 
-    // Hard clear any persisted Supabase auth tokens for this project (desktop fix)
+    // Clear local storage
     try {
       const projectRef = 'zlrratamkejbxlzmhkyr';
       const keys = Object.keys(localStorage);
@@ -116,7 +133,7 @@ const Index = () => {
         }
       }
     } catch (e) {
-      // no-op
+      // Ignore errors
     }
 
     setUser(null);
@@ -125,27 +142,22 @@ const Index = () => {
     navigate('/auth', { replace: true });
   };
 
-  const handleSelectedSlotsChange = (slots: { date: Date; slots: TimeSlot[] }[]) => {
-    setSelectedSlots(slots);
-  };
-
-  const handleEventsImported = (events: any[]) => {
+  const handleEventsImported = useCallback((events: any[]) => {
     setImportedEvents(events);
     toast({
       title: "Events imported successfully",
       description: `Imported ${events.length} events from ICS file`,
     });
-  };
+  }, [toast]);
 
-  const handleClearImportedEvents = () => {
+  const handleClearImportedEvents = useCallback(() => {
     setImportedEvents([]);
-    setAvailability([]); // Clear availability when clearing events
-    setSelectedSlots([]); // Clear selected slots when clearing events
-    setShowICSCalendar(true); // Show ICS panel again when cleared
+    setIcsSelectedSlots([]);
+    setShowICSCalendar(true);
     toast({
       title: "Imported events cleared",
     });
-  };
+  }, [toast]);
 
   if (!user) {
     return (
@@ -206,9 +218,7 @@ const Index = () => {
           <div className="mb-2">
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                {credentialsError} Please check your Supabase secrets configuration.
-              </AlertDescription>
+              <AlertDescription>{credentialsError}</AlertDescription>
             </Alert>
           </div>
         )}
@@ -220,8 +230,8 @@ const Index = () => {
               {credentials ? (
                 <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
                   <GoogleCalendarView 
-                    onAvailabilityChange={setAvailability} 
-                    onSelectedSlotsChange={handleSelectedSlotsChange}
+                    onAvailabilityChange={() => {}} // Not used anymore
+                    onSelectedSlotsChange={setGoogleSelectedSlots}
                     credentials={credentials}
                     onTogglePanel={() => setShowGoogleCalendar(false)}
                     showToggle={showICSCalendar || importedEvents.length > 0}
@@ -231,14 +241,14 @@ const Index = () => {
                 <div className="h-full flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
                   <div className="text-center text-muted-foreground">
                     <AlertCircle className="h-8 w-8 mx-auto mb-2" />
-                    <p className="text-sm">Waiting for Google OAuth credentials...</p>
+                    <p className="text-sm">Waiting for credentials...</p>
                   </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* ICS Import and Calendar View */}
+          {/* ICS Calendar View */}
           {showICSCalendar && (
             <div className="lg:col-span-1">
               {importedEvents.length === 0 ? (
@@ -249,8 +259,8 @@ const Index = () => {
                 <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
                   <ICSCalendarView 
                     events={importedEvents}
-                    onAvailabilityChange={setAvailability}
-                    onSelectedSlotsChange={handleSelectedSlotsChange}
+                    onAvailabilityChange={() => {}} // Not used anymore
+                    onSelectedSlotsChange={setIcsSelectedSlots}
                     onClearEvents={handleClearImportedEvents}
                     onTogglePanel={() => setShowICSCalendar(false)}
                     showToggle={showGoogleCalendar}
@@ -266,45 +276,41 @@ const Index = () => {
               <Button
                 variant="outline"
                 onClick={() => setShowGoogleCalendar(true)}
-                className="w-full h-12 border-dashed border-2 text-muted-foreground hover:text-foreground"
+                className="w-full h-12 border-dashed border-2"
               >
                 Show Google Calendar
               </Button>
             </div>
           )}
           
-          {!showICSCalendar && (
+          {!showICSCalendar && importedEvents.length > 0 && (
             <div className="lg:col-span-1 flex items-start">
               <Button
                 variant="outline"
                 onClick={() => setShowICSCalendar(true)}
-                className="w-full h-12 border-dashed border-2 text-muted-foreground hover:text-foreground"
+                className="w-full h-12 border-dashed border-2"
               >
                 Show ICS Calendar
               </Button>
             </div>
           )}
 
-          {/* Sticky Container for Text Generator and Email Composer */}
-          <div className={`lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:overflow-hidden ${
+          {/* Text Generator and Email Composer */}
+          <div className={`lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] ${
             (showGoogleCalendar || showICSCalendar) 
-              ? showGoogleCalendar && showICSCalendar 
-                ? 'lg:col-span-3' 
-                : 'lg:col-span-3'
-              : 'hidden'
+              ? 'lg:col-span-3' 
+              : 'lg:col-span-5'
           }`}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 h-full">
-              {/* Availability Text Generator */}
               <div className="h-full">
                 <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
                   <GoogleAvailabilityGenerator 
-                    selectedSlots={selectedSlots}
+                    selectedSlots={combinedSelectedSlots()}
                     onTextGenerated={setAvailabilityText}
                   />
                 </Suspense>
               </div>
 
-              {/* Email Composer */}
               <div className="h-full">
                 <Suspense fallback={<div className="h-96 bg-muted animate-pulse rounded-lg" />}>
                   <EmailComposer 
@@ -317,7 +323,7 @@ const Index = () => {
           </div>
         </div>
         
-        {/* Feedback Section */}
+        {/* Feedback */}
         <div className="mt-2 flex justify-center">
           <Suspense fallback={<div className="h-32 w-96 bg-muted animate-pulse rounded-lg" />}>
             <FeedbackForm />
