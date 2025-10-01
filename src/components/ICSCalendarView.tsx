@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -129,17 +129,10 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
   };
 
   // Generate availability for all selected dates
-  const generateAvailability = () => {
-    // When no dates are selected we should clear all state.
-    // Without this the parent component may continue to display stale slots
-    // from a previous selection, because onSelectedSlotsChange is never invoked
-    // when there are no selected dates.
+  const generateAvailability = useCallback(() => {
     if (selectedDates.length === 0) {
-      // Clear local availability state
       setAvailability([]);
-      // Inform parent that there are no available slots
       onAvailabilityChange([]);
-      // Also clear any previously selected slots to avoid stale selections
       onSelectedSlotsChange([]);
       return;
     }
@@ -148,8 +141,6 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
 
     for (const selectedDate of selectedDates) {
       const dayEvents = getEventsForDate(selectedDate);
-
-      // Consider only blocking events (ignore all-day/transparent-like events)
       const blockingEvents = dayEvents
         .filter(e => !isAllDayEvent(e))
         .filter(event => event.start < new Date(selectedDate.getTime() + 17 * 60 * 60 * 1000) && 
@@ -158,12 +149,8 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
 
       let allTimeSlots: TimeSlot[] = [];
 
-      // Generate slots based on selected durations
       if (selectedDurations.has('grouped')) {
-        // Generate 30-minute base slots first
         const baseSlots = generateSlotsForDuration(selectedDate, blockingEvents, 30);
-        
-        // Group consecutive slots
         const groupedSlots: TimeSlot[] = [];
         let i = 0;
         
@@ -172,16 +159,13 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
           let endSlot = currentSlot;
           let j = i + 1;
           
-          // Find consecutive slots
           while (j < baseSlots.length && baseSlots[j].startTime.getTime() === endSlot.endTime.getTime()) {
             endSlot = baseSlots[j];
             j++;
           }
           
-          // Calculate duration in minutes
           const durationMinutes = (endSlot.endTime.getTime() - currentSlot.startTime.getTime()) / (1000 * 60);
           
-          // Create grouped slot
           groupedSlots.push({
             start: currentSlot.start,
             end: endSlot.end,
@@ -197,7 +181,6 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
         allTimeSlots = [...allTimeSlots, ...groupedSlots];
       }
       
-      // Generate slots for standard durations (15, 30, 60)
       const standardDurations = [15, 30, 60].filter(d => selectedDurations.has(d as 15 | 30 | 60));
       for (const duration of standardDurations) {
         const slots = generateSlotsForDuration(selectedDate, blockingEvents, duration);
@@ -207,7 +190,6 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
         allTimeSlots = [...allTimeSlots, ...slots];
       }
       
-      // Generate custom duration slots
       if (selectedDurations.has('custom') && customDuration > 0) {
         const customSlots = generateSlotsForDuration(selectedDate, blockingEvents, customDuration);
         customSlots.forEach(slot => {
@@ -216,7 +198,6 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
         allTimeSlots = [...allTimeSlots, ...customSlots];
       }
       
-      // Sort all slots by start time
       allTimeSlots.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
       availableSlots.push({
@@ -228,14 +209,13 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
     setAvailability(availableSlots);
     onAvailabilityChange(availableSlots);
     
-    // Update selected slots callback
     const selectedSlots = availableSlots.map(daySlot => ({
       date: daySlot.date,
       slots: daySlot.slots.filter(slot => slot.selected)
     })).filter(daySlot => daySlot.slots.length > 0);
     
     onSelectedSlotsChange(selectedSlots);
-  };
+  }, [selectedDates, selectedDurations, customDuration, events, onAvailabilityChange, onSelectedSlotsChange]);
 
   // Toggle slot selection
   const toggleSlotSelection = (slotId: string) => {
@@ -262,7 +242,7 @@ export function ICSCalendarView({ events, onAvailabilityChange, onSelectedSlotsC
   // Auto-generate availability when dates or slot duration changes
   useEffect(() => {
     generateAvailability();
-  }, [selectedDates, selectedDurations, customDuration, events]);
+  }, [generateAvailability]);
 
   // Remove a selected date
   const removeDate = (dateToRemove: Date) => {
