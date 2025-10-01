@@ -32,6 +32,33 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
   const [oauthService, setOauthService] = useState<GoogleOAuthService | null>(null);
   const { toast } = useToast();
 
+  // Add cache with 5 minute expiration
+  const eventCache = useMemo(() => ({
+    data: new Map<string, { events: CalendarEvent[]; timestamp: number }>(),
+    
+    get(dateKey: string): CalendarEvent[] | null {
+      const cached = this.data.get(dateKey);
+      if (!cached) return null;
+      
+      // Expire after 5 minutes
+      const isExpired = Date.now() - cached.timestamp > 5 * 60 * 1000;
+      if (isExpired) {
+        this.data.delete(dateKey);
+        return null;
+      }
+      
+      return cached.events;
+    },
+    
+    set(dateKey: string, events: CalendarEvent[]) {
+      this.data.set(dateKey, { events, timestamp: Date.now() });
+    },
+    
+    clear() {
+      this.data.clear();
+    }
+  }), []);
+
   useEffect(() => {
     if (credentials) {
       const oauth = new GoogleOAuthService(credentials);
@@ -128,6 +155,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
   const handleGoogleLogout = () => {
     if (oauthService) {
       oauthService.clearTokens();
+      eventCache.clear(); // Clear cache
       setIsAuthenticated(false);
       setSelectedDates([]);
       setEvents({});
@@ -162,14 +190,26 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
       
       for (const date of selectedDates) {
         const dateKey = format(date, 'yyyy-MM-dd');
-        try {
-          const dayEvents = await calendarService.getCalendarEvents('primary', date, date);
-          eventsByDate[dateKey] = dayEvents.filter(event => 
-            event.start.dateTime && event.end.dateTime && event.status !== 'cancelled'
-          );
-        } catch (error) {
-          console.error(`Error fetching events for ${dateKey}:`, error);
-          eventsByDate[dateKey] = [];
+        
+        // Check cache first
+        const cachedEvents = eventCache.get(dateKey);
+        if (cachedEvents) {
+          console.log(`Using cached events for ${dateKey}`);
+          eventsByDate[dateKey] = cachedEvents;
+        } else {
+          try {
+            console.log(`Fetching events for ${dateKey}`);
+            const dayEvents = await calendarService.getCalendarEvents('primary', date, date);
+            const filteredEvents = dayEvents.filter(event => 
+              event.start.dateTime && event.end.dateTime && event.status !== 'cancelled'
+            );
+            
+            eventCache.set(dateKey, filteredEvents);
+            eventsByDate[dateKey] = filteredEvents;
+          } catch (error) {
+            console.error(`Error fetching events for ${dateKey}:`, error);
+            eventsByDate[dateKey] = [];
+          }
         }
       }
 
@@ -294,7 +334,7 @@ const GoogleCalendarView: React.FC<GoogleCalendarViewProps> = ({ onAvailabilityC
     } finally {
       setLoading(false);
     }
-  }, [calendarService, isAuthenticated, selectedDates, selectedDurations, customDuration, onAvailabilityChange, onSelectedSlotsChange, toast]);
+  }, [calendarService, isAuthenticated, selectedDates, selectedDurations, customDuration, eventCache, onAvailabilityChange, onSelectedSlotsChange, toast]);
 
   // Add debounced version of fetchCalendarData
   const debouncedFetch = useMemo(() => {
